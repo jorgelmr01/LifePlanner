@@ -6,6 +6,7 @@ import { db } from '../db/db'
 import { estadoPorArea, progresoNivel } from '../logic/xp'
 import { DIA_MS, claveDia, inicioDia } from '../logic/dates'
 import { LOGROS } from '../logic/achievements'
+import { proximoTitulo, rachaFlexible, tituloDeNivel } from '../logic/engagement'
 import { Barra, BadgeAtencion } from '../components/ui'
 import { Radar } from '../components/Radar'
 import type { Nav } from '../App'
@@ -57,12 +58,24 @@ export function Character({ nav }: { nav: Nav }) {
         <h2 style={{ fontSize: 22, fontWeight: 700, marginTop: 4 }}>
           {ajustes?.nombre ?? 'Aventurero'}
         </h2>
-        <div className="subtitulo" style={{ marginBottom: 12 }}>
-          Nivel {nivel.nivel} · {nivel.xp} XP
+        <div style={{ marginBottom: 4 }}>
+          <span className="badge badge-nivel">
+            {tituloDeNivel(nivel.nivel)} · Nv {nivel.nivel}
+          </span>{' '}
+          {rachaFlexible(xpEventos) > 0 && (
+            <span className="badge badge-media" title="Racha flexible: un día de descanso no la rompe">
+              🔥 {rachaFlexible(xpEventos)} días
+            </span>
+          )}
         </div>
+        <div className="subtitulo" style={{ marginBottom: 12 }}>{nivel.xp} XP</div>
         <Barra fraccion={nivel.fraccion} />
         <div className="subtitulo" style={{ marginTop: 6 }}>
           {nivel.xpSiguienteNivel - nivel.xp} XP para el nivel {nivel.nivel + 1}
+          {(() => {
+            const prox = proximoTitulo(nivel.nivel)
+            return prox ? ` · próximo título: ${prox.titulo} (Nv ${prox.nivel})` : ''
+          })()}
         </div>
       </div>
 

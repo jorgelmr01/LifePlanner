@@ -149,6 +149,15 @@ Botón **+** flotante: captura rápida (entrada, marcar ritmo, interacción, met
   - [x] ⬅️ Botón/gesto atrás nativo para vistas y hojas · check-ins mañana y noche · primer día guiado
   - [x] ✅ 24 tests unitarios (Vitest) de XP, sugerencias, logros y fechas
   - [x] 🚀 Workflow de deploy a GitHub Pages (al hacer merge a `main`)
+- [x] **Iteración 3 — Retención** (que quieras volver todos los días)
+  - [x] 🎁 Misiones bonus diarias: 2 retos que rotan cada día, salen de tus datos y **se completan solos** con tu actividad (+20 XP c/u)
+  - [x] 🔥 Racha flexible sin culpa: un día de descanso no la rompe (se rompe tras 2 seguidos)
+  - [x] 💥 Golpes críticos: ~10% de probabilidad de x2 XP en cualquier acción
+  - [x] 👑 Títulos de nivel (Novato → Aprendiz → … → Leyenda → Mito) con "próximo título" visible
+  - [x] ✨ Pregunta del día: 24 prompts de journal que rotan (adiós al "¿qué pasó hoy?" eterno)
+  - [x] 📸 Recuerdos: la app te muestra qué escribiste hace un mes
+  - [x] ✓ Marcar todo: el checklist diario en un tap
+  - [x] 🏅 6 logros nuevos de largo horizonte (22 total): rachas 7/30/100, misiones 10/50, nivel 20
 - [ ] **V2** — PIN/WebAuthn, calendario, sync multi-dispositivo cifrado, integraciones, automatizaciones
 
 > El prototipo Flutter original (`life_copilot/`) fue retirado en el pivote; vive en el historial de git (tag `V0.0.0`).

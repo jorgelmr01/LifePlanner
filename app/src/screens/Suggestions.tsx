@@ -32,8 +32,8 @@ export function Suggestions({ nav }: { nav: Nav }) {
 
   async function hecha(s: Sugerencia) {
     await completarSugerencia(s.id)
-    const xp = await otorgarXp('sugerencia', s.id, [])
-    toast(`+${xp} XP ✨ ¡Bien ahí!`)
+    const r = await otorgarXp('sugerencia', s.id, [])
+    toast(r.critico ? `💥 ¡CRÍTICO! +${r.total} XP` : `+${r.total} XP ✨ ¡Bien ahí!`)
   }
 
   function abrirRef(s: Sugerencia) {

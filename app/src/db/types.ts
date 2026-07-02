@@ -115,7 +115,7 @@ export interface XpEvent {
   dia: string // 'YYYY-MM-DD'
   areaId: string // '' si no aplica a un área
   cantidad: number
-  fuente: 'entrada' | 'checkin' | 'ritmo' | 'interaccion' | 'meta' | 'sugerencia' | 'logro'
+  fuente: 'entrada' | 'checkin' | 'ritmo' | 'interaccion' | 'meta' | 'sugerencia' | 'logro' | 'mision'
   refId: string
 }
 

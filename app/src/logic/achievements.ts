@@ -4,6 +4,7 @@
 import { db } from '../db/db'
 import { DIA_MS, inicioDia } from './dates'
 import { nivelDeXp, otorgarXp } from './xp'
+import { rachaFlexible } from './engagement'
 import { toast } from '../components/ui'
 
 export interface ContextoLogros {
@@ -19,6 +20,8 @@ export interface ContextoLogros {
   maxNivelArea: number
   areasConActividad14d: number
   areasVisibles: number
+  racha: number
+  misionesCompletadas: number
 }
 
 export interface DefLogro {
@@ -46,6 +49,13 @@ export const LOGROS: DefLogro[] = [
   { id: 'nivel_10', icono: '🗡️', nombre: 'Veterano Nv10', descripcion: 'Llega a nivel 10 de personaje', check: (c) => c.nivelPersonaje >= 10 },
   { id: 'area_nv5', icono: '💎', nombre: 'Especialista', descripcion: 'Un área a nivel 5', check: (c) => c.maxNivelArea >= 5 },
   { id: 'equilibrista', icono: '⚖️', nombre: 'Equilibrista', descripcion: 'Todas tus áreas con actividad en 2 semanas', check: (c) => c.areasVisibles >= 3 && c.areasConActividad14d >= c.areasVisibles },
+  // largo horizonte: siempre hay algo que perseguir después del primer mes
+  { id: 'racha_7', icono: '🔥', nombre: 'En racha', descripcion: '7 días de constancia flexible', check: (c) => c.racha >= 7 },
+  { id: 'racha_30', icono: '🌋', nombre: 'Fuego eterno', descripcion: '30 días de constancia flexible', check: (c) => c.racha >= 30 },
+  { id: 'racha_100', icono: '☄️', nombre: 'Cometa', descripcion: '100 días de constancia flexible', check: (c) => c.racha >= 100 },
+  { id: 'misiones_10', icono: '🎁', nombre: 'Cazarrecompensas', descripcion: '10 misiones bonus completadas', check: (c) => c.misionesCompletadas >= 10 },
+  { id: 'misiones_50', icono: '🏹', nombre: 'Mercenario', descripcion: '50 misiones bonus completadas', check: (c) => c.misionesCompletadas >= 50 },
+  { id: 'nivel_20', icono: '👑', nombre: 'Maestro Nv20', descripcion: 'Llega a nivel 20 de personaje', check: (c) => c.nivelPersonaje >= 20 },
 ]
 
 async function construirContexto(): Promise<ContextoLogros> {
@@ -81,6 +91,8 @@ async function construirContexto(): Promise<ContextoLogros> {
     maxNivelArea: Math.max(0, ...visibles.map((a) => nivelDeXp(xpPorArea.get(a.id) ?? 0))),
     areasConActividad14d: visibles.filter((a) => (xp14PorArea.get(a.id) ?? 0) > 0).length,
     areasVisibles: visibles.length,
+    racha: rachaFlexible(xp),
+    misionesCompletadas: xp.filter((e) => e.fuente === 'mision').length,
   }
 }
 

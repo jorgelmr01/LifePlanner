@@ -9,10 +9,13 @@ import { evaluarLogros } from './achievements'
 import { toast } from '../components/ui'
 
 async function conXp(fuente: FuenteXp, refId: string, areaIds: string[], aviso = true) {
-  const xp = await otorgarXp(fuente, refId, areaIds)
-  if (aviso) toast(`+${xp} XP ✨`)
-  // los logros se evalúan después para que el toast del XP salga primero
+  const r = await otorgarXp(fuente, refId, areaIds)
+  if (aviso) toast(r.critico ? `💥 ¡CRÍTICO! +${r.total} XP` : `+${r.total} XP ✨`)
+  // logros y misiones se evalúan después para que el toast del XP salga primero
   evaluarLogros().catch(() => {})
+  import('./engagement')
+    .then((m) => m.evaluarMisiones())
+    .catch(() => {})
 }
 
 /* ---------- Ritmos ---------- */

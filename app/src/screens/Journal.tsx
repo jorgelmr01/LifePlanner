@@ -219,10 +219,14 @@ export function EntradaHoja({
   abierta,
   onCerrar,
   existente,
+  promptInicial,
+  tagsExtra,
 }: {
   abierta: boolean
   onCerrar: () => void
   existente?: Entry
+  promptInicial?: string
+  tagsExtra?: string[]
 }) {
   const [contenido, setContenido] = useState(existente?.contenido ?? '')
   const [mood, setMood] = useState<number | undefined>(existente?.mood)
@@ -280,7 +284,7 @@ export function EntradaHoja({
         mood,
         areaIds,
         personaIds,
-        tags: [],
+        tags: tagsExtra ?? [],
         privacidad: privada ? 'privada' : 'normal',
       })
       setContenido('')
@@ -302,11 +306,11 @@ export function EntradaHoja({
   return (
     <Hoja abierta={abierta} onCerrar={onCerrar}>
       <h2>{existente ? '📝 Editar entrada' : '📝 Nueva entrada'}</h2>
-      <label>¿Qué quieres registrar?</label>
+      <label>{promptInicial ?? '¿Qué quieres registrar?'}</label>
       <textarea
         value={contenido}
         onChange={(e) => setContenido(e.target.value)}
-        placeholder={prompts.join('  ·  ')}
+        placeholder={promptInicial ?? prompts.join('  ·  ')}
         autoFocus={!existente}
       />
       {soportaVoz && (

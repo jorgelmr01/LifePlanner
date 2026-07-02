@@ -14,19 +14,36 @@ export const XP_VALORES = {
   meta: 25,
   sugerencia: 10,
   logro: 25,
+  mision: 20,
 } as const
 
 export type FuenteXp = keyof typeof XP_VALORES
 
+export interface ResultadoXp {
+  total: number
+  critico: boolean
+}
+
+// Probabilidad de golpe crítico (x2 XP): recompensa variable, el gancho más
+// fuerte contra la monotonía. Desactivado fuera del navegador (tests deterministas).
+const PROB_CRITICO = 0.1
+
 /**
  * Registra XP para cero o más áreas (dividido en partes iguales).
+ * ~10% de las veces es un golpe crítico que duplica el XP.
  * Si el personaje sube de nivel, emite el evento window 'levelup' con el nivel nuevo.
  */
-export async function otorgarXp(fuente: FuenteXp, refId: string, areaIds: string[]): Promise<number> {
-  const total = XP_VALORES[fuente]
+export async function otorgarXp(
+  fuente: FuenteXp,
+  refId: string,
+  areaIds: string[],
+): Promise<ResultadoXp> {
+  const critico =
+    typeof window !== 'undefined' && fuente !== 'logro' && Math.random() < PROB_CRITICO
+  const base = XP_VALORES[fuente] * (critico ? 2 : 1)
   const ahora = Date.now()
   const targets = areaIds.length ? areaIds : ['']
-  const porArea = Math.max(1, Math.round(total / targets.length))
+  const porArea = Math.max(1, Math.round(base / targets.length))
   const antes = await xpTotalPersonaje()
   const eventos: XpEvent[] = targets.map((areaId) => ({
     id: uid(),
@@ -42,7 +59,7 @@ export async function otorgarXp(fuente: FuenteXp, refId: string, areaIds: string
   if (nivelDeXp(despues) > nivelDeXp(antes) && typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent('levelup', { detail: { nivel: nivelDeXp(despues) } }))
   }
-  return total
+  return { total: porArea * targets.length, critico }
 }
 
 /** Elimina el XP generado por un objeto (al borrar una entrada, desmarcar un ritmo, etc.) */

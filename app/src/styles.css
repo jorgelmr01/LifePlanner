@@ -50,6 +50,7 @@
     --text: #f9fafb;
     --text-2: #9ca3af;
     --primary-surface: #312e81;
+    --secondary-surface: #042f2e;
     --success-light: #064e3b;
     --warning-light: #451a03;
     --error-light: #450a0a;
@@ -63,6 +64,7 @@
   --text: #f9fafb;
   --text-2: #9ca3af;
   --primary-surface: #312e81;
+  --secondary-surface: #042f2e;
   --success-light: #064e3b;
   --warning-light: #451a03;
   --error-light: #450a0a;

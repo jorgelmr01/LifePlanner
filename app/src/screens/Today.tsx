@@ -6,21 +6,38 @@ import { claveDia, DIA_MS, diasDesde, fechaLarga, inicioDia } from '../logic/dat
 import { generarSugerencias, esperadasPorSemana } from '../logic/suggestions'
 import { progresoNivel } from '../logic/xp'
 import { evaluarLogros } from '../logic/achievements'
+import {
+  buscarRecuerdo,
+  cargarDatosMisiones,
+  evaluarMisiones,
+  misionesDelDia,
+  preguntaDelDia,
+  rachaFlexible,
+  tituloDeNivel,
+  type Mision,
+} from '../logic/engagement'
 import { notificarSugerencias, pedirPersistencia } from '../logic/notify'
 import { marcarRitmoHoy, desmarcarRitmoHoy, crearEntrada } from '../logic/actions'
 import { Barra, EscalaEmoji, Hoja } from '../components/ui'
+import { EntradaHoja } from './Journal'
 import type { Nav } from '../App'
 
 export function Today({ nav }: { nav: Nav }) {
   const [checkinAbierto, setCheckinAbierto] = useState<'manana' | 'noche' | null>(null)
+  const [preguntaAbierta, setPreguntaAbierta] = useState(false)
 
   useEffect(() => {
     pedirPersistencia()
     generarSugerencias()
       .then(() => notificarSugerencias())
       .then(() => evaluarLogros())
+      .then(() => evaluarMisiones())
       .catch(() => {})
   }, [])
+
+  // se recalculan en vivo cuando cambian los datos subyacentes
+  const misiones: Mision[] =
+    useLiveQuery(() => cargarDatosMisiones().then(misionesDelDia)) ?? []
 
   const ajustes = useLiveQuery(() => db.ajustes.get('main'))
   const ritmos = useLiveQuery(() => db.ritmos.where('estado').equals('activo').toArray()) ?? []
@@ -39,6 +56,14 @@ export function Today({ nav }: { nav: Nav }) {
 
   const xpTotal = xpEventos.reduce((s, e) => s + e.cantidad, 0)
   const nivel = progresoNivel(xpTotal)
+  const racha = rachaFlexible(xpEventos)
+  const titulo = tituloDeNivel(nivel.nivel)
+  const pregunta = preguntaDelDia()
+  const preguntaRespondida = entradasRecientes.some(
+    (e) => e.fecha >= inicioDia() && e.tipo === 'journal' && e.tags.includes('pregunta-del-dia'),
+  )
+  const todasEntradas = useLiveQuery(() => db.entries.toArray()) ?? []
+  const recuerdo = buscarRecuerdo(todasEntradas)
 
   const hechoHoy = new Set(logsHoy.map((l) => l.ritmoId))
   const hoy = new Date().getDay()
@@ -122,14 +147,46 @@ export function Today({ nav }: { nav: Nav }) {
           <div className="fila" style={{ marginBottom: 8 }}>
             <span style={{ fontSize: 26 }}>🧭</span>
             <div className="crece">
-              <b>Nivel {nivel.nivel}</b>
+              <b>
+                Nivel {nivel.nivel} · {titulo}
+              </b>
               <div className="subtitulo">
                 {nivel.xp} XP · {nivel.xpSiguienteNivel - nivel.xp} para el nivel {nivel.nivel + 1}
               </div>
             </div>
-            <span className="link">Ver personaje →</span>
+            {racha > 0 && (
+              <span className="badge badge-media" title="Racha flexible: un día de descanso no la rompe">
+                🔥 {racha}d
+              </span>
+            )}
           </div>
           <Barra fraccion={nivel.fraccion} />
+        </div>
+      )}
+
+      {misiones.length > 0 && (
+        <div className="tarjeta">
+          <div className="seccion-titulo">
+            🎁 Misiones bonus de hoy
+            <span>+20 XP c/u</span>
+          </div>
+          {misiones.map((m) => (
+            <div key={m.id} className="fila" style={{ padding: '5px 0' }}>
+              <span className={`check ${m.hecha ? 'hecho' : ''}`} style={{ width: 24, height: 24, fontSize: 13 }}>
+                {m.hecha ? '✓' : ''}
+              </span>
+              <span style={{ fontSize: 18 }}>{m.icono}</span>
+              <span
+                className="crece"
+                style={{ fontSize: 14.5, opacity: m.hecha ? 0.6 : 1, textDecoration: m.hecha ? 'line-through' : 'none' }}
+              >
+                {m.texto}
+              </span>
+            </div>
+          ))}
+          <div className="subtitulo" style={{ marginTop: 6 }}>
+            Se completan solas con tu actividad. Mañana habrá otras.
+          </div>
         </div>
       )}
 
@@ -176,6 +233,33 @@ export function Today({ nav }: { nav: Nav }) {
         </div>
       )}
 
+      {!preguntaRespondida && (
+        <div className="tarjeta tocable" onClick={() => setPreguntaAbierta(true)}>
+          <div className="fila">
+            <span style={{ fontSize: 24 }}>✨</span>
+            <div className="crece">
+              <b>Pregunta del día</b>
+              <div className="subtitulo">{pregunta}</div>
+            </div>
+            <span style={{ color: 'var(--gray-400)' }}>›</span>
+          </div>
+        </div>
+      )}
+
+      {recuerdo && (
+        <div className="tarjeta" style={{ borderColor: 'var(--secondary)', background: 'var(--secondary-surface)' }}>
+          <div className="fila" style={{ alignItems: 'flex-start' }}>
+            <span style={{ fontSize: 22 }}>📸</span>
+            <div className="crece">
+              <b>{diasDesde(recuerdo.fecha) >= 25 ? 'Hace un mes escribiste' : `Hace ${diasDesde(recuerdo.fecha)} días escribiste`}</b>
+              <div className="subtitulo" style={{ marginTop: 4, fontStyle: 'italic' }}>
+                “{recuerdo.contenido.length > 140 ? recuerdo.contenido.slice(0, 140) + '…' : recuerdo.contenido}”
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {!mananaHecha && (
         <div className="tarjeta">
           <div className="fila">
@@ -209,7 +293,17 @@ export function Today({ nav }: { nav: Nav }) {
       <div className="seccion" style={{ marginTop: 24 }}>
         <div className="seccion-titulo">
           Misiones de hoy
-          <span>
+          <span className="fila" style={{ gap: 10 }}>
+            {ritmosHoy.filter((r) => !hechoHoy.has(r.id)).length > 1 && (
+              <a
+                className="link"
+                onClick={async () => {
+                  for (const r of ritmosHoy) if (!hechoHoy.has(r.id)) await marcarRitmoHoy(r)
+                }}
+              >
+                ✓ Marcar todo
+              </a>
+            )}
             {ritmosHoy.filter((r) => hechoHoy.has(r.id)).length}/{ritmosHoy.length}
           </span>
         </div>
@@ -308,6 +402,14 @@ export function Today({ nav }: { nav: Nav }) {
         noche={checkinAbierto === 'noche'}
         onCerrar={() => setCheckinAbierto(null)}
       />
+      {preguntaAbierta && (
+        <EntradaHoja
+          abierta={true}
+          onCerrar={() => setPreguntaAbierta(false)}
+          promptInicial={pregunta}
+          tagsExtra={['pregunta-del-dia']}
+        />
+      )}
     </div>
   )
 }

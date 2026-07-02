@@ -364,6 +364,19 @@ Pantalla J4 (Preferencias del copiloto):
 
 **Justificación:** el usuario pidió explícitamente el framing "tu vida como personaje de RPG donde el objetivo lo defines tú". La versión original prohibía puntos y niveles por miedo a la culpa; la solución es gamificar el *progreso* (que solo suma) y nunca el *fallo* (que sigue sin existir como concepto). Esto matiza la fila "Streaks" y el principio 2.6 del spec.
 
+### D. Retención a largo plazo: contra el tedio y el burnout de gamificación
+
+**Problema:** estas apps mueren en el primer mes — llenar datos se vuelve tedioso y la gamificación se agota (todos los logros tempranos caen rápido y luego no pasa nada).
+
+**Decisión:** un motor de engagement con cuatro principios:
+
+1. **Cero fricción añadida**: las misiones bonus diarias se completan *solas* con la actividad normal (escribir, contactar, marcar ritmos) — nunca piden datos extra. Botón "marcar todo" para el checklist diario.
+2. **Contenido que rota a diario** (determinista por fecha): 2 misiones bonus elegidas entre plantillas parametrizadas con TUS datos (tu área descuidada, tu gente), y una pregunta del día distinta (banco de 24) para que el journal no sea "¿qué pasó hoy?" en loop.
+3. **Recompensa variable y horizonte largo**: golpes críticos (~10% de probabilidad de x2 XP), racha flexible *sin culpa* (un día de descanso no la rompe; se rompe tras 2 seguidos), títulos de nivel (Novato→Mito) que dan sentido a la curva cuadrática de XP, y logros de largo horizonte (racha 100, nivel 20, 50 misiones).
+4. **Pago emocional del historial**: la tarjeta "Recuerdos" resurge entradas de hace ~un mes — registrar hoy compra un momento futuro, que es el incentivo más honesto para volver.
+
+**Qué NO hicimos:** rachas punitivas al estilo Duolingo (contradicen el principio sin culpa), XP decreciente por repetición (castiga la constancia) y notificaciones agresivas.
+
 ### C. Sugerencias de re-balanceo como feature central
 
 **Decisión:** el motor de sugerencias por reglas (reconexión, consistencia, balance, cumpleaños, metas estancadas) es la funcionalidad núcleo del MVP y funciona 100% local, sin AI.
