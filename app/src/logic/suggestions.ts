@@ -129,10 +129,35 @@ async function reglaCumpleanos() {
   }
 }
 
-/** Regla 5 — Metas estancadas: activas sin avance en 14 días */
+/** Regla 5 — Metas: estancadas, atrasadas contra el plan, o vencidas sin evaluar */
 async function reglaMetas() {
+  const { estadoPlan, progresoEsperado, diasRestantes } = await import('./goals')
   const metas = await db.metas.where('estado').equals('activa').toArray()
   for (const m of metas) {
+    const plan = estadoPlan(m)
+
+    if (plan === 'vencida') {
+      await crear(
+        'meta',
+        `${m.id}:vencida`,
+        `Tu meta ${m.icono} "${m.titulo}" venció con ${m.progreso}% de avance. Evalúala: replantea la fecha, reformula el objetivo o ciérrala con aprendizaje.`,
+        'La fecha límite pasó sin completarse; una meta vencida sin evaluar no ayuda.',
+      )
+      continue
+    }
+
+    if (plan === 'atrasada') {
+      const esperado = progresoEsperado(m) ?? 0
+      const dias = diasRestantes(m)
+      await crear(
+        'meta',
+        `${m.id}:plan`,
+        `Vas al ${m.progreso}% de "${m.titulo}" y el plan pide ~${esperado}% (quedan ${dias} días). Un empujón esta semana o replantea la fecha.`,
+        'Progreso por debajo del ritmo que pide tu fecha límite.',
+      )
+      continue
+    }
+
     if (diasDesde(m.actualizado) >= 14) {
       const paso = m.proximoPaso ? ` Tu próximo paso: "${m.proximoPaso}".` : ''
       await crear(

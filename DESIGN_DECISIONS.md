@@ -377,6 +377,16 @@ Pantalla J4 (Preferencias del copiloto):
 
 **Qué NO hicimos:** rachas punitivas al estilo Duolingo (contradicen el principio sin culpa), XP decreciente por repetición (castiga la constancia) y notificaciones agresivas.
 
+### E. Metas con ciclo completo: plantear bien → seguir contra plan → evaluar al final
+
+**Decisión:** las metas siguen las mejores prácticas de objetivos sin la jerga:
+
+1. **Al crear**, el form guía hacia un objetivo específico, medible ("sabré que lo logré cuando…"), con fecha, relevante (porqué) y alcanzable (primer paso mínimo) — SMART sin decir SMART. Todo opcional salvo el título: la guía invita, no bloquea.
+2. **Durante**, si hay fecha límite se calcula el progreso esperado a hoy (lineal entre creación y fecha) y se compara con el real, con tolerancia de ±15 puntos: adelante / al día / atrasada / vencida. La regla de sugerencias avisa cuando vas atrasado ("vas al X% y el plan pide ~Y%").
+3. **Al vencer**, la meta exige evaluación — no se queda pudriéndose en la lista: replantear la fecha (registrando por qué no alcanzó), reformular el objetivo (si el aprendizaje fue que el objetivo correcto era otro), o cerrar con aprendizaje. Cada replanteo queda en el historial de la meta; abandonar guarda la lección y vive en "Cerradas con aprendizaje", nunca se borra.
+
+**Justificación:** una meta vencida sin evaluar es el punto donde la gente abandona estas apps; convertir el vencimiento en un ritual corto de aprendizaje mantiene el sistema honesto y vivo.
+
 ### C. Sugerencias de re-balanceo como feature central
 
 **Decisión:** el motor de sugerencias por reglas (reconexión, consistencia, balance, cumpleaños, metas estancadas) es la funcionalidad núcleo del MVP y funciona 100% local, sin AI.

@@ -37,9 +37,10 @@ export function Suggestions({ nav }: { nav: Nav }) {
   }
 
   function abrirRef(s: Sugerencia) {
-    if (s.tipo === 'reconexion' || s.tipo === 'cumpleanos') nav.abrir({ t: 'persona', id: s.refId })
-    else if (s.tipo === 'meta') nav.abrir({ t: 'meta', id: s.refId })
-    else if (s.tipo === 'balance') nav.abrir({ t: 'area', id: s.refId })
+    const id = s.refId.split(':')[0] // los refId de metas llevan sufijo (:vencida, :plan)
+    if (s.tipo === 'reconexion' || s.tipo === 'cumpleanos') nav.abrir({ t: 'persona', id })
+    else if (s.tipo === 'meta') nav.abrir({ t: 'meta', id })
+    else if (s.tipo === 'balance') nav.abrir({ t: 'area', id })
   }
 
   return (

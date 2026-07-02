@@ -166,6 +166,12 @@ Botón **+** flotante: captura rápida (entrada, marcar ritmo, interacción, met
   - [x] 🔍 Búsqueda de personas por nombre, contexto, notas y datos · 🎂 badge de cumpleaños ≤30 días en la lista
   - [x] 👋 "Conocí a alguien" en la captura rápida: registra a alguien nuevo antes de que se te olvide
   - [x] 🏅 3 logros de constancia total (25): 30/150/365 días activos de por vida
+- [x] **Iteración 5 — Metas con mejores prácticas**
+  - [x] 📝 Form guiado tipo SMART: específico + medible ("sabré que lo logré cuando…") + fecha límite + porqué + primer paso mínimo
+  - [x] 📊 Seguimiento contra plan: barra de progreso real vs esperado a hoy, días restantes y estado (🚀 adelante / ✓ al día / ⏳ atrasada / ⏰ vencida)
+  - [x] 💡 Sugerencias proactivas: "vas al 10% y el plan pide ~67% (quedan 10 días)" y "tu meta venció — evalúala"
+  - [x] ⚖️ Evaluación final obligada al vencer: replantear fecha (con aprendizaje), reformular el objetivo, o cerrar con aprendizaje ("abandonar bien también es ganar")
+  - [x] 📜 Historial de replanteos por meta y pestaña "Cerradas con aprendizaje"
 - [ ] **V2** — PIN/WebAuthn, calendario, sync multi-dispositivo cifrado, integraciones, automatizaciones
 
 > El prototipo Flutter original (`life_copilot/`) fue retirado en el pivote; vive en el historial de git (tag `V0.0.0`).

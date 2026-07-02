@@ -57,16 +57,30 @@ export interface Milestone {
   hecho: boolean
 }
 
+/** Registro de cada replanteo tras una evaluación: la meta aprende contigo */
+export interface Replanteo {
+  id: string
+  fecha: number
+  tipo: 'fecha' | 'objetivo'
+  nota: string
+  fechaAnterior?: number
+  fechaNueva?: number
+}
+
 export interface Meta {
   id: string
   titulo: string
   icono: string
   porque: string
+  /** cómo sabrás que la lograste (medible) */
   metrica: string
   progreso: number // 0-100
   proximoPaso: string
   milestones: Milestone[]
   fechaLimite?: number
+  replanteos: Replanteo[]
+  /** aprendizaje al abandonar: abandonar bien también es ganar */
+  notaAbandono?: string
   areaIds: string[]
   estado: 'activa' | 'pausada' | 'completada' | 'abandonada'
   creado: number

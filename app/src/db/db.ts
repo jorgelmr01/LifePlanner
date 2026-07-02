@@ -64,6 +64,16 @@ db.version(3).upgrade(async (tx) => {
     })
 })
 
+// v4: metas con historial de replanteos (evaluación final y replanteo)
+db.version(4).upgrade(async (tx) => {
+  await tx
+    .table('metas')
+    .toCollection()
+    .modify((m) => {
+      if (!Array.isArray(m.replanteos)) m.replanteos = []
+    })
+})
+
 export const uid = () =>
   (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now())
 
