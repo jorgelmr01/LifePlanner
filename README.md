@@ -151,13 +151,21 @@ Botón **+** flotante: captura rápida (entrada, marcar ritmo, interacción, met
   - [x] 🚀 Workflow de deploy a GitHub Pages (al hacer merge a `main`)
 - [x] **Iteración 3 — Retención** (que quieras volver todos los días)
   - [x] 🎁 Misiones bonus diarias: 2 retos que rotan cada día, salen de tus datos y **se completan solos** con tu actividad (+20 XP c/u)
-  - [x] 🔥 Racha flexible sin culpa: un día de descanso no la rompe (se rompe tras 2 seguidos)
+  - [x] 🔥 Racha flexible sin culpa con 🛡️ escudos acumulables (1 cada 7 días, máx. 6): un retiro de una semana no te borra el progreso
+  - [x] 📆 Días activos totales: el contador de por vida nunca se pierde aunque la racha se rompa
   - [x] 💥 Golpes críticos: ~10% de probabilidad de x2 XP en cualquier acción
   - [x] 👑 Títulos de nivel (Novato → Aprendiz → … → Leyenda → Mito) con "próximo título" visible
   - [x] ✨ Pregunta del día: 24 prompts de journal que rotan (adiós al "¿qué pasó hoy?" eterno)
   - [x] 📸 Recuerdos: la app te muestra qué escribiste hace un mes
   - [x] ✓ Marcar todo: el checklist diario en un tap
   - [x] 🏅 6 logros nuevos de largo horizonte (22 total): rachas 7/30/100, misiones 10/50, nivel 20
+- [x] **Iteración 4 — Hub de relaciones** (tu memoria externa para no olvidar a nadie)
+  - [x] 👤 Ficha completa por persona: nivel de confianza (❤️ 1-5), contextos (Universidad, Familia, Iglesia… + personalizados), cómo se conocieron, lo que le importa, notas libres
+  - [x] 🗂️ Ficha rápida clave-valor: "Esposa: Ana", "Equipo: Rayados", "Alergia: nueces" — lo que hoy cargas en la cabeza
+  - [x] 💬 "Para la próxima vez": pendientes por persona que reaparecen al registrar una interacción
+  - [x] 🔍 Búsqueda de personas por nombre, contexto, notas y datos · 🎂 badge de cumpleaños ≤30 días en la lista
+  - [x] 👋 "Conocí a alguien" en la captura rápida: registra a alguien nuevo antes de que se te olvide
+  - [x] 🏅 3 logros de constancia total (25): 30/150/365 días activos de por vida
 - [ ] **V2** — PIN/WebAuthn, calendario, sync multi-dispositivo cifrado, integraciones, automatizaciones
 
 > El prototipo Flutter original (`life_copilot/`) fue retirado en el pivote; vive en el historial de git (tag `V0.0.0`).

@@ -9,10 +9,10 @@ import { evaluarLogros } from '../logic/achievements'
 import {
   buscarRecuerdo,
   cargarDatosMisiones,
+  estadoRacha,
   evaluarMisiones,
   misionesDelDia,
   preguntaDelDia,
-  rachaFlexible,
   tituloDeNivel,
   type Mision,
 } from '../logic/engagement'
@@ -56,7 +56,7 @@ export function Today({ nav }: { nav: Nav }) {
 
   const xpTotal = xpEventos.reduce((s, e) => s + e.cantidad, 0)
   const nivel = progresoNivel(xpTotal)
-  const racha = rachaFlexible(xpEventos)
+  const rachaInfo = estadoRacha(xpEventos)
   const titulo = tituloDeNivel(nivel.nivel)
   const pregunta = preguntaDelDia()
   const preguntaRespondida = entradasRecientes.some(
@@ -154,9 +154,12 @@ export function Today({ nav }: { nav: Nav }) {
                 {nivel.xp} XP · {nivel.xpSiguienteNivel - nivel.xp} para el nivel {nivel.nivel + 1}
               </div>
             </div>
-            {racha > 0 && (
-              <span className="badge badge-media" title="Racha flexible: un día de descanso no la rompe">
-                🔥 {racha}d
+            {rachaInfo.racha > 0 && (
+              <span
+                className="badge badge-media"
+                title="Racha flexible: un día de descanso no la rompe y tus escudos 🛡️ cubren ausencias largas (retiros, viajes)"
+              >
+                🔥 {rachaInfo.racha}d{rachaInfo.escudos > 0 && ` 🛡️${rachaInfo.escudos}`}
               </span>
             )}
           </div>

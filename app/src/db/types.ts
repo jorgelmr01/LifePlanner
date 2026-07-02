@@ -73,11 +73,27 @@ export interface Meta {
   actualizado: number
 }
 
+/** Dato libre tipo ficha: "Esposa: Ana", "Equipo: Rayados", "Alergia: nueces" */
+export interface DatoPersona {
+  id: string
+  etiqueta: string
+  valor: string
+}
+
 export interface Persona {
   id: string
   nombre: string
   circulo: 'cercano' | 'familia' | 'trabajo' | 'conocido'
+  /** 1-5: qué tanto confías/cercanía real (independiente del círculo) */
+  confianza?: number
+  /** de dónde: Universidad, Iglesia, Infancia… (varias a la vez) */
+  contextos: string[]
+  comoConocimos: string
   loQueImporta: string
+  /** memoria libre: su familia, historias, lo que no quieres olvidar */
+  notas: string
+  /** ficha de datos rápidos clave-valor */
+  datos: DatoPersona[]
   preguntarProxima: string
   frecuenciaDias: number // cada cuántos días quiero contacto
   cumpleanos?: string // 'MM-DD'

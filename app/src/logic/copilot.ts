@@ -54,8 +54,15 @@ export async function construirContexto(): Promise<string> {
   for (const i of inters) ultimaPor.set(i.personaId, Math.max(ultimaPor.get(i.personaId) ?? 0, i.fecha))
   for (const p of personas) {
     const u = ultimaPor.get(p.id)
+    const extras = [
+      p.contextos?.length ? p.contextos.join('/') : '',
+      p.confianza ? `confianza ${p.confianza}/5` : '',
+      p.notas ? `notas: ${p.notas.slice(0, 80)}` : '',
+    ]
+      .filter(Boolean)
+      .join('; ')
     lineas.push(
-      `- ${p.nombre} (quiere contacto cada ${p.frecuenciaDias} días): ${u ? `hace ${diasDesde(u)} días` : 'sin registro'}`,
+      `- ${p.nombre} (quiere contacto cada ${p.frecuenciaDias} días): ${u ? `hace ${diasDesde(u)} días` : 'sin registro'}${extras ? ` [${extras}]` : ''}`,
     )
   }
   if (metas.length) {

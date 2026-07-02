@@ -6,7 +6,7 @@ import { db } from '../db/db'
 import { estadoPorArea, progresoNivel } from '../logic/xp'
 import { DIA_MS, claveDia, inicioDia } from '../logic/dates'
 import { LOGROS } from '../logic/achievements'
-import { proximoTitulo, rachaFlexible, tituloDeNivel } from '../logic/engagement'
+import { DIAS_POR_ESCUDO, MAX_ESCUDOS, estadoRacha, proximoTitulo, tituloDeNivel } from '../logic/engagement'
 import { Barra, BadgeAtencion } from '../components/ui'
 import { Radar } from '../components/Radar'
 import type { Nav } from '../App'
@@ -62,9 +62,9 @@ export function Character({ nav }: { nav: Nav }) {
           <span className="badge badge-nivel">
             {tituloDeNivel(nivel.nivel)} · Nv {nivel.nivel}
           </span>{' '}
-          {rachaFlexible(xpEventos) > 0 && (
-            <span className="badge badge-media" title="Racha flexible: un día de descanso no la rompe">
-              🔥 {rachaFlexible(xpEventos)} días
+          {estadoRacha(xpEventos).racha > 0 && (
+            <span className="badge badge-media" title="Racha flexible con escudos">
+              🔥 {estadoRacha(xpEventos).racha} días
             </span>
           )}
         </div>
@@ -104,6 +104,38 @@ export function Character({ nav }: { nav: Nav }) {
           )}
         </div>
       )}
+
+      {(() => {
+        const r = estadoRacha(xpEventos)
+        if (!r.diasActivosTotales) return null
+        return (
+          <div className="tarjeta">
+            <div className="seccion-titulo">Constancia</div>
+            <div className="fila" style={{ gap: 16, textAlign: 'center' }}>
+              <div className="crece">
+                <div style={{ fontSize: 22, fontWeight: 700 }}>🔥 {r.racha}</div>
+                <div className="subtitulo">racha actual</div>
+              </div>
+              <div className="crece">
+                <div style={{ fontSize: 22, fontWeight: 700 }}>
+                  🛡️ {r.escudos}
+                  <span className="subtitulo">/{MAX_ESCUDOS}</span>
+                </div>
+                <div className="subtitulo">escudos</div>
+              </div>
+              <div className="crece">
+                <div style={{ fontSize: 22, fontWeight: 700 }}>📆 {r.diasActivosTotales}</div>
+                <div className="subtitulo">días totales</div>
+              </div>
+            </div>
+            <p className="subtitulo" style={{ marginTop: 10 }}>
+              Cada {DIAS_POR_ESCUDO} días de racha ganas un escudo: cubre un día entero sin la app
+              (retiros, viajes). El primer día de descanso siempre es gratis, y tus días totales
+              nunca se pierden.
+            </p>
+          </div>
+        )
+      })()}
 
       <div className="tarjeta tocable" onClick={() => nav.abrir({ t: 'revision' })}>
         <div className="fila">

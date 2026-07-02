@@ -7,9 +7,9 @@ import { marcarRitmoHoy } from '../logic/actions'
 import { ChipsSelector, Hoja } from '../components/ui'
 import { EntradaHoja } from '../screens/Journal'
 import { MetaHoja } from '../screens/Goals'
-import { InteraccionHoja } from '../screens/People'
+import { InteraccionHoja, PersonaHoja } from '../screens/People'
 
-type Modo = 'menu' | 'entrada' | 'ritmos' | 'persona' | 'meta' | 'nuevoRitmo'
+type Modo = 'menu' | 'entrada' | 'ritmos' | 'persona' | 'meta' | 'nuevoRitmo' | 'nuevaPersona'
 
 export function QuickCapture() {
   const [modo, setModo] = useState<Modo | null>(null)
@@ -33,6 +33,7 @@ export function QuickCapture() {
             { icono: '📝', texto: 'Entrada rápida', sub: 'Journal, momento, reflexión', modo: 'entrada' as Modo },
             { icono: '✓', texto: 'Marcar ritmo', sub: 'Checklist de hoy', modo: 'ritmos' as Modo },
             { icono: '👤', texto: 'Registrar interacción', sub: 'Contacté a alguien', modo: 'persona' as Modo },
+            { icono: '👋', texto: 'Conocí a alguien', sub: 'Captúralo antes de que se te olvide', modo: 'nuevaPersona' as Modo },
             { icono: '🎯', texto: 'Nueva meta', sub: 'Tú defines el objetivo', modo: 'meta' as Modo },
             { icono: '🔁', texto: 'Nuevo ritmo', sub: 'Hábito o práctica recurrente', modo: 'nuevoRitmo' as Modo },
           ].map((op) => (
@@ -60,6 +61,7 @@ export function QuickCapture() {
       )}
       <MetaHoja abierta={modo === 'meta'} onCerrar={cerrar} />
       <NuevoRitmoHoja abierta={modo === 'nuevoRitmo'} onCerrar={cerrar} />
+      <PersonaHoja abierta={modo === 'nuevaPersona'} onCerrar={cerrar} />
     </>
   )
 }

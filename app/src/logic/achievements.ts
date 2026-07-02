@@ -4,7 +4,7 @@
 import { db } from '../db/db'
 import { DIA_MS, inicioDia } from './dates'
 import { nivelDeXp, otorgarXp } from './xp'
-import { rachaFlexible } from './engagement'
+import { estadoRacha } from './engagement'
 import { toast } from '../components/ui'
 
 export interface ContextoLogros {
@@ -22,6 +22,7 @@ export interface ContextoLogros {
   areasVisibles: number
   racha: number
   misionesCompletadas: number
+  diasActivosTotales: number
 }
 
 export interface DefLogro {
@@ -56,6 +57,10 @@ export const LOGROS: DefLogro[] = [
   { id: 'misiones_10', icono: '🎁', nombre: 'Cazarrecompensas', descripcion: '10 misiones bonus completadas', check: (c) => c.misionesCompletadas >= 10 },
   { id: 'misiones_50', icono: '🏹', nombre: 'Mercenario', descripcion: '50 misiones bonus completadas', check: (c) => c.misionesCompletadas >= 50 },
   { id: 'nivel_20', icono: '👑', nombre: 'Maestro Nv20', descripcion: 'Llega a nivel 20 de personaje', check: (c) => c.nivelPersonaje >= 20 },
+  // días activos totales: nunca se pierden aunque la racha se rompa
+  { id: 'dias_30', icono: '📆', nombre: 'Presente', descripcion: '30 días activos en total', check: (c) => c.diasActivosTotales >= 30 },
+  { id: 'dias_150', icono: '🗿', nombre: 'Inquebrantable', descripcion: '150 días activos en total', check: (c) => c.diasActivosTotales >= 150 },
+  { id: 'dias_365', icono: '🎊', nombre: 'Un año de vida', descripcion: '365 días activos en total', check: (c) => c.diasActivosTotales >= 365 },
 ]
 
 async function construirContexto(): Promise<ContextoLogros> {
@@ -91,8 +96,9 @@ async function construirContexto(): Promise<ContextoLogros> {
     maxNivelArea: Math.max(0, ...visibles.map((a) => nivelDeXp(xpPorArea.get(a.id) ?? 0))),
     areasConActividad14d: visibles.filter((a) => (xp14PorArea.get(a.id) ?? 0) > 0).length,
     areasVisibles: visibles.length,
-    racha: rachaFlexible(xp),
+    racha: estadoRacha(xp).racha,
     misionesCompletadas: xp.filter((e) => e.fuente === 'mision').length,
+    diasActivosTotales: estadoRacha(xp).diasActivosTotales,
   }
 }
 

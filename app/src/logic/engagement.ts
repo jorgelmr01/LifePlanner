@@ -26,29 +26,68 @@ export function eleccionDelDia(clave: string, max: number, dia = claveDia()): nu
   return semillaDe(`${dia}:${clave}`) % max
 }
 
-/* ---------- Racha flexible (sin culpa) ---------- */
+/* ---------- Racha flexible con escudos (sin culpa, a prueba de retiros) ---------- */
+
+// 6 escudos + el día de descanso libre = un retiro de una semana completa sobrevive
+export const MAX_ESCUDOS = 6
+export const DIAS_POR_ESCUDO = 7
+
+export interface EstadoRacha {
+  /** días de constancia actuales */
+  racha: number
+  /** escudos disponibles: absorben días sin actividad (retiros, viajes) */
+  escudos: number
+  /** días con actividad en toda la historia — nunca se pierde */
+  diasActivosTotales: number
+}
 
 /**
- * Días de constancia con regla amable: un día de descanso NO rompe la racha;
- * se rompe tras 2 días seguidos sin actividad. Hoy sin actividad tampoco la
- * rompe (todavía puedes actuar).
+ * Racha amable con colchón acumulable (mecánica tipo LinkedIn):
+ * - Cada día con actividad suma; cada 7 días de racha ganas 1 escudo (máx 6).
+ * - El primer día sin actividad de un hueco es descanso libre (no gasta nada).
+ * - Los siguientes días sin actividad consumen 1 escudo cada uno; la racha
+ *   solo se rompe cuando ya no hay escudos. Un retiro de una semana con el
+ *   colchón lleno sobrevive.
+ * - Hoy sin actividad nunca rompe (el día sigue en curso).
+ * - Los escudos restantes se conservan aunque la racha se rompa.
+ * Se deriva por simulación cronológica del historial: sin estado extra,
+ * siempre recomputable.
  */
-export function rachaFlexible(xpEventos: Pick<XpEvent, 'dia'>[], hoy = inicioDia()): number {
+export function estadoRacha(xpEventos: Pick<XpEvent, 'dia'>[], hoy = inicioDia()): EstadoRacha {
   const activos = new Set(xpEventos.map((e) => e.dia))
+  if (!activos.size) return { racha: 0, escudos: 0, diasActivosTotales: 0 }
+
+  const dias = [...activos].sort()
+  const inicio = new Date(dias[0] + 'T00:00:00').getTime()
+  const claveHoy = claveDia(hoy)
+
   let racha = 0
-  let huecos = 0
-  for (let i = 0; i < 400; i++) {
-    const dia = claveDia(hoy - i * DIA_MS)
+  let escudos = 0
+  let hueco = 0
+  for (let t = inicio; ; t += DIA_MS) {
+    const dia = claveDia(t)
     if (activos.has(dia)) {
       racha++
-      huecos = 0
-    } else {
-      if (i === 0) continue // hoy aún está en curso
-      huecos++
-      if (huecos >= 2) break
+      hueco = 0
+      if (racha % DIAS_POR_ESCUDO === 0 && escudos < MAX_ESCUDOS) escudos++
+    } else if (dia === claveHoy) {
+      // hoy aún está en curso: no gasta ni rompe
+    } else if (racha > 0) {
+      hueco++
+      if (hueco > 1) {
+        // del segundo día del hueco en adelante se gastan escudos
+        if (escudos > 0) escudos--
+        else racha = 0
+      }
     }
+    if (dia === claveHoy) break
   }
-  return racha
+  return { racha, escudos, diasActivosTotales: activos.size }
+}
+
+/** Compatibilidad: solo el número de días de racha */
+export function rachaFlexible(xpEventos: Pick<XpEvent, 'dia'>[], hoy = inicioDia()): number {
+  return estadoRacha(xpEventos, hoy).racha
 }
 
 /* ---------- Títulos de nivel (los niveles tardan más; los títulos les dan sentido) ---------- */

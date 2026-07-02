@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db, uid } from '../db/db'
 import type { Interaccion, Persona } from '../db/types'
-import { diasDesde, fechaCorta, haceTexto } from '../logic/dates'
+import { diasDesde, diasHastaCumple, fechaCorta, haceTexto } from '../logic/dates'
 import { archivarPersona, registrarInteraccion } from '../logic/actions'
 import { EscalaEmoji, Hoja, Vacio } from '../components/ui'
 import type { Nav } from '../App'
@@ -21,9 +21,34 @@ const CIRCULOS: { valor: Persona['circulo']; texto: string }[] = [
   { valor: 'conocido', texto: 'Conocido' },
 ]
 
+export const CONTEXTOS_SUGERIDOS = [
+  'Familia',
+  'Universidad',
+  'Trabajo',
+  'Iglesia',
+  'Infancia',
+  'Vecinos',
+  'Gym',
+  'Viaje',
+  'Amigos de amigos',
+]
+
+const CONFIANZA_TEXTO = ['', 'Conocido', 'Casual', 'Amigo', 'Cercano', 'Confidente']
+
+function Corazones({ n, tam = 13 }: { n?: number; tam?: number }) {
+  if (!n) return null
+  return (
+    <span style={{ fontSize: tam }} title={`Confianza: ${CONFIANZA_TEXTO[n]}`}>
+      {'❤️'.repeat(n)}
+      <span style={{ opacity: 0.25 }}>{'❤️'.repeat(5 - n)}</span>
+    </span>
+  )
+}
+
 export function People({ nav }: { nav: Nav }) {
   const [agregarAbierto, setAgregarAbierto] = useState(false)
   const [filtro, setFiltro] = useState<'todos' | Persona['circulo']>('todos')
+  const [busqueda, setBusqueda] = useState('')
 
   const personas = useLiveQuery(() => db.personas.where('estado').equals('activa').toArray()) ?? []
   const interacciones = useLiveQuery(() => db.interacciones.toArray()) ?? []
@@ -33,7 +58,16 @@ export function People({ nav }: { nav: Nav }) {
     ultimaPorPersona.set(i.personaId, Math.max(ultimaPorPersona.get(i.personaId) ?? 0, i.fecha))
   }
 
-  const filtradas = personas.filter((p) => filtro === 'todos' || p.circulo === filtro)
+  const q = busqueda.trim().toLowerCase()
+  const coincide = (p: Persona) =>
+    !q ||
+    [p.nombre, p.notas, p.loQueImporta, p.comoConocimos, ...(p.contextos ?? []),
+      ...(p.datos ?? []).flatMap((d) => [d.etiqueta, d.valor])]
+      .join(' ')
+      .toLowerCase()
+      .includes(q)
+
+  const filtradas = personas.filter((p) => (filtro === 'todos' || p.circulo === filtro) && coincide(p))
   const conDias = filtradas.map((p) => {
     const ultima = ultimaPorPersona.get(p.id)
     const dias = ultima ? diasDesde(ultima) : null
@@ -42,19 +76,28 @@ export function People({ nav }: { nav: Nav }) {
   const atrasadas = conDias.filter((x) => x.atrasada).sort((a, b) => (b.dias ?? 0) - (a.dias ?? 0))
   const alDia = conDias.filter((x) => !x.atrasada).sort((a, b) => (a.dias ?? 999) - (b.dias ?? 999))
 
-  const tarjeta = ({ p, dias, atrasada }: (typeof conDias)[number]) => (
-    <div key={p.id} className="tarjeta tocable fila" onClick={() => nav.abrir({ t: 'persona', id: p.id })}>
-      <span style={{ fontSize: 22 }}>👤</span>
-      <div className="crece">
-        <b>{p.nombre}</b>
-        <div className="subtitulo">
-          {dias === null ? 'Sin contactos registrados' : dias === 0 ? 'Contacto hoy' : `Hace ${dias} días`}
-          {' · '}quieres cada {p.frecuenciaDias}d
+  const tarjeta = ({ p, dias, atrasada }: (typeof conDias)[number]) => {
+    const cumple = diasHastaCumple(p.cumpleanos)
+    return (
+      <div key={p.id} className="tarjeta tocable fila" onClick={() => nav.abrir({ t: 'persona', id: p.id })}>
+        <span style={{ fontSize: 22 }}>👤</span>
+        <div className="crece">
+          <div className="fila" style={{ gap: 8 }}>
+            <b>{p.nombre}</b>
+            <Corazones n={p.confianza} tam={10} />
+          </div>
+          <div className="subtitulo">
+            {dias === null ? 'Sin contactos registrados' : dias === 0 ? 'Contacto hoy' : `Hace ${dias} días`}
+            {(p.contextos ?? []).length > 0 && ` · ${p.contextos.slice(0, 2).join(', ')}`}
+          </div>
         </div>
+        {cumple !== null && cumple <= 30 && (
+          <span className="badge badge-media">🎂 {cumple === 0 ? '¡hoy!' : `${cumple}d`}</span>
+        )}
+        {atrasada && <span className="badge badge-baja">⚠️ {dias}d</span>}
       </div>
-      {atrasada && <span className="badge badge-baja">⚠️ {dias}d</span>}
-    </div>
-  )
+    )
+  }
 
   return (
     <div className="pantalla">
@@ -65,9 +108,16 @@ export function People({ nav }: { nav: Nav }) {
         </button>
       </div>
 
+      <input
+        style={{ marginBottom: 12 }}
+        value={busqueda}
+        onChange={(e) => setBusqueda(e.target.value)}
+        placeholder="🔍 Buscar por nombre, contexto, notas…"
+      />
+
       <div className="chips" style={{ marginBottom: 16 }}>
         <button className={`chip ${filtro === 'todos' ? 'activo' : ''}`} onClick={() => setFiltro('todos')}>
-          Todos
+          Todos ({personas.length})
         </button>
         {CIRCULOS.map((c) => (
           <button
@@ -81,7 +131,10 @@ export function People({ nav }: { nav: Nav }) {
       </div>
 
       {personas.length === 0 && (
-        <Vacio icono="🤝" texto="Agrega a la gente con la que quieres mantener contacto." />
+        <Vacio icono="🤝" texto="Tu memoria externa de relaciones: agrega a quien no quieres olvidar." />
+      )}
+      {personas.length > 0 && filtradas.length === 0 && (
+        <Vacio icono="🔍" texto={`Nada encontrado para "${busqueda}".`} />
       )}
 
       {atrasadas.length > 0 && (
@@ -102,7 +155,7 @@ export function People({ nav }: { nav: Nav }) {
   )
 }
 
-function PersonaHoja({
+export function PersonaHoja({
   abierta,
   onCerrar,
   existente,
@@ -113,9 +166,17 @@ function PersonaHoja({
 }) {
   const [nombre, setNombre] = useState(existente?.nombre ?? '')
   const [circulo, setCirculo] = useState<Persona['circulo']>(existente?.circulo ?? 'cercano')
+  const [confianza, setConfianza] = useState<number | undefined>(existente?.confianza)
+  const [contextos, setContextos] = useState<string[]>(existente?.contextos ?? [])
+  const [contextoCustom, setContextoCustom] = useState('')
   const [frecuencia, setFrecuencia] = useState(existente?.frecuenciaDias ?? 14)
+  const [comoConocimos, setComoConocimos] = useState(existente?.comoConocimos ?? '')
   const [loQueImporta, setLoQueImporta] = useState(existente?.loQueImporta ?? '')
+  const [notas, setNotas] = useState(existente?.notas ?? '')
   const [cumple, setCumple] = useState(existente?.cumpleanos ?? '')
+
+  const alternarContexto = (c: string) =>
+    setContextos(contextos.includes(c) ? contextos.filter((x) => x !== c) : [...contextos, c])
 
   async function guardar() {
     if (!nombre.trim()) return
@@ -123,7 +184,12 @@ function PersonaHoja({
       id: existente?.id ?? uid(),
       nombre: nombre.trim(),
       circulo,
+      confianza,
+      contextos,
+      comoConocimos: comoConocimos.trim(),
       loQueImporta: loQueImporta.trim(),
+      notas: notas.trim(),
+      datos: existente?.datos ?? [],
       preguntarProxima: existente?.preguntarProxima ?? '',
       frecuenciaDias: frecuencia,
       cumpleanos: cumple || undefined,
@@ -132,15 +198,78 @@ function PersonaHoja({
       silenciarSugerencias: existente?.silenciarSugerencias ?? false,
     }
     await db.personas.put(base)
-    if (!existente) setNombre('')
+    if (!existente) {
+      setNombre('')
+      setNotas('')
+      setComoConocimos('')
+      setContextos([])
+      setConfianza(undefined)
+    }
     onCerrar()
   }
 
   return (
     <Hoja abierta={abierta} onCerrar={onCerrar}>
-      <h2>{existente ? 'Editar persona' : 'Nueva persona'}</h2>
+      <h2>{existente ? 'Editar persona' : '👋 Nueva persona'}</h2>
+      {!existente && (
+        <p className="subtitulo">
+          Captura lo esencial ahora; podrás completar su ficha cuando quieras.
+        </p>
+      )}
       <label>Nombre</label>
-      <input value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Nombre" />
+      <input value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Nombre" autoFocus={!existente} />
+
+      <label>¿De dónde? (contexto)</label>
+      <div className="chips">
+        {[...new Set([...CONTEXTOS_SUGERIDOS, ...contextos])].map((c) => (
+          <button
+            key={c}
+            className={`chip ${contextos.includes(c) ? 'activo' : ''}`}
+            onClick={() => alternarContexto(c)}
+          >
+            {c}
+          </button>
+        ))}
+      </div>
+      <div className="fila" style={{ marginTop: 8 }}>
+        <input
+          className="crece"
+          value={contextoCustom}
+          onChange={(e) => setContextoCustom(e.target.value)}
+          placeholder="Otro contexto (ej. Curso de piano)…"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && contextoCustom.trim()) {
+              alternarContexto(contextoCustom.trim())
+              setContextoCustom('')
+            }
+          }}
+        />
+        <button
+          className="btn btn-secundario btn-mini"
+          disabled={!contextoCustom.trim()}
+          onClick={() => {
+            alternarContexto(contextoCustom.trim())
+            setContextoCustom('')
+          }}
+        >
+          +
+        </button>
+      </div>
+
+      <label>Nivel de confianza</label>
+      <div className="chips">
+        {[1, 2, 3, 4, 5].map((n) => (
+          <button
+            key={n}
+            className={`chip ${confianza === n ? 'activo' : ''}`}
+            onClick={() => setConfianza(confianza === n ? undefined : n)}
+            title={CONFIANZA_TEXTO[n]}
+          >
+            {'❤️'.repeat(n)} {CONFIANZA_TEXTO[n]}
+          </button>
+        ))}
+      </div>
+
       <label>Círculo</label>
       <div className="chips">
         {CIRCULOS.map((c) => (
@@ -153,6 +282,7 @@ function PersonaHoja({
           </button>
         ))}
       </div>
+
       <label>¿Cada cuánto quieres contacto?</label>
       <div className="chips">
         {FRECUENCIAS.map((f) => (
@@ -165,12 +295,28 @@ function PersonaHoja({
           </button>
         ))}
       </div>
-      <label>Lo que le importa (opcional)</label>
+
+      <label>¿Cómo se conocieron?</label>
+      <input
+        value={comoConocimos}
+        onChange={(e) => setComoConocimos(e.target.value)}
+        placeholder="Compañeros de generación, nos presentó Ana…"
+      />
+
+      <label>Lo que le importa</label>
       <input
         value={loQueImporta}
         onChange={(e) => setLoQueImporta(e.target.value)}
         placeholder="Familia, startups, fútbol…"
       />
+
+      <label>Notas (tu memoria externa)</label>
+      <textarea
+        value={notas}
+        onChange={(e) => setNotas(e.target.value)}
+        placeholder="Su esposa es Ana, tienen 2 hijos, está buscando cambiar de trabajo…"
+      />
+
       <label>Cumpleaños (opcional)</label>
       <input
         type="text"
@@ -194,6 +340,9 @@ function PersonaHoja({
 export function PersonDetail({ nav, id }: { nav: Nav; id: string }) {
   const [interAbierta, setInterAbierta] = useState(false)
   const [editAbierta, setEditAbierta] = useState(false)
+  const [proxima, setProxima] = useState<string | null>(null)
+  const [datoEtiqueta, setDatoEtiqueta] = useState('')
+  const [datoValor, setDatoValor] = useState('')
 
   const persona = useLiveQuery(() => db.personas.get(id), [id])
   const historial =
@@ -201,6 +350,16 @@ export function PersonDetail({ nav, id }: { nav: Nav; id: string }) {
 
   if (!persona) return null
   const ultima = historial.length ? historial[0].fecha : null
+  const cumple = diasHastaCumple(persona.cumpleanos)
+
+  async function agregarDato() {
+    if (!persona || !datoEtiqueta.trim() || !datoValor.trim()) return
+    await db.personas.update(id, {
+      datos: [...(persona.datos ?? []), { id: uid(), etiqueta: datoEtiqueta.trim(), valor: datoValor.trim() }],
+    })
+    setDatoEtiqueta('')
+    setDatoValor('')
+  }
 
   return (
     <div className="pantalla">
@@ -215,20 +374,22 @@ export function PersonDetail({ nav, id }: { nav: Nav; id: string }) {
       </div>
 
       <div className="tarjeta">
-        <div className="subtitulo">
-          Círculo: {persona.circulo} · Contacto deseado: cada {persona.frecuenciaDias} días
+        <div className="fila" style={{ flexWrap: 'wrap', gap: 8 }}>
+          <Corazones n={persona.confianza} tam={14} />
+          {(persona.contextos ?? []).map((c) => (
+            <span key={c} className="badge badge-nivel">
+              {c}
+            </span>
+          ))}
+          <span className="badge badge-media">{persona.circulo}</span>
         </div>
-        <div style={{ marginTop: 6 }}>
+        <div style={{ marginTop: 10 }}>
           {ultima ? `Último contacto: ${haceTexto(ultima)}` : 'Sin contactos registrados aún'}
+          <span className="subtitulo"> · quieres cada {persona.frecuenciaDias} días</span>
         </div>
-        {persona.loQueImporta && (
-          <div className="subtitulo" style={{ marginTop: 6 }}>
-            Le importa: {persona.loQueImporta}
-          </div>
-        )}
-        {persona.cumpleanos && (
+        {cumple !== null && (
           <div className="subtitulo" style={{ marginTop: 4 }}>
-            🎂 Cumpleaños: {persona.cumpleanos}
+            🎂 Cumpleaños: {persona.cumpleanos} {cumple === 0 ? '— ¡es hoy!' : `(en ${cumple} días)`}
           </div>
         )}
       </div>
@@ -236,6 +397,101 @@ export function PersonDetail({ nav, id }: { nav: Nav; id: string }) {
       <button className="btn btn-primario btn-bloque" onClick={() => setInterAbierta(true)}>
         Registrar interacción
       </button>
+
+      {(persona.comoConocimos || persona.loQueImporta || persona.notas) && (
+        <div className="tarjeta" style={{ marginTop: 12 }}>
+          <div className="seccion-titulo">Sobre {persona.nombre}</div>
+          {persona.comoConocimos && (
+            <p style={{ marginBottom: 8 }}>
+              <span className="subtitulo">Cómo se conocieron:</span> {persona.comoConocimos}
+            </p>
+          )}
+          {persona.loQueImporta && (
+            <p style={{ marginBottom: 8 }}>
+              <span className="subtitulo">Le importa:</span> {persona.loQueImporta}
+            </p>
+          )}
+          {persona.notas && <p style={{ whiteSpace: 'pre-wrap' }}>{persona.notas}</p>}
+        </div>
+      )}
+
+      <div className="tarjeta" style={{ marginTop: 12 }}>
+        <div className="seccion-titulo">Ficha rápida</div>
+        {(persona.datos ?? []).length === 0 && (
+          <p className="subtitulo" style={{ marginBottom: 8 }}>
+            Datos que no quieres cargar en la cabeza: su pareja, sus hijos, su equipo, su café
+            favorito…
+          </p>
+        )}
+        {(persona.datos ?? []).map((d) => (
+          <div key={d.id} className="fila" style={{ padding: '4px 0' }}>
+            <span className="subtitulo" style={{ minWidth: 90 }}>
+              {d.etiqueta}
+            </span>
+            <span className="crece">{d.valor}</span>
+            <button
+              aria-label={`Borrar dato ${d.etiqueta}`}
+              style={{ color: 'var(--gray-400)' }}
+              onClick={() =>
+                db.personas.update(id, { datos: (persona.datos ?? []).filter((x) => x.id !== d.id) })
+              }
+            >
+              ✕
+            </button>
+          </div>
+        ))}
+        <div className="fila" style={{ marginTop: 8 }}>
+          <input
+            style={{ width: 110 }}
+            value={datoEtiqueta}
+            onChange={(e) => setDatoEtiqueta(e.target.value)}
+            placeholder="Esposa"
+          />
+          <input
+            className="crece"
+            value={datoValor}
+            onChange={(e) => setDatoValor(e.target.value)}
+            placeholder="Ana"
+            onKeyDown={(e) => e.key === 'Enter' && agregarDato()}
+          />
+          <button
+            className="btn btn-secundario btn-mini"
+            disabled={!datoEtiqueta.trim() || !datoValor.trim()}
+            onClick={agregarDato}
+          >
+            +
+          </button>
+        </div>
+      </div>
+
+      <div className="tarjeta" style={{ marginTop: 12 }}>
+        <div className="seccion-titulo">Para la próxima vez</div>
+        {proxima === null ? (
+          <div className="fila">
+            <span className="crece" style={{ whiteSpace: 'pre-wrap' }}>
+              {persona.preguntarProxima || (
+                <span className="subtitulo">¿Qué quieres preguntarle o contarle?</span>
+              )}
+            </span>
+            <button className="btn btn-fantasma btn-mini" onClick={() => setProxima(persona.preguntarProxima)}>
+              Editar
+            </button>
+          </div>
+        ) : (
+          <div className="fila">
+            <input className="crece" value={proxima} onChange={(e) => setProxima(e.target.value)} autoFocus />
+            <button
+              className="btn btn-primario btn-mini"
+              onClick={async () => {
+                await db.personas.update(id, { preguntarProxima: proxima.trim() })
+                setProxima(null)
+              }}
+            >
+              ✓
+            </button>
+          </div>
+        )}
+      </div>
 
       <div className="seccion" style={{ marginTop: 24 }}>
         <div className="seccion-titulo">Historial</div>
@@ -324,6 +580,11 @@ export function InteraccionHoja({
   return (
     <Hoja abierta={abierta} onCerrar={onCerrar}>
       <h2>Interacción con {persona.nombre}</h2>
+      {persona.preguntarProxima && (
+        <div className="tarjeta" style={{ background: 'var(--primary-surface)', marginTop: 8 }}>
+          <span className="subtitulo">Tenías pendiente:</span> {persona.preguntarProxima}
+        </div>
+      )}
       <label>Tipo</label>
       <div className="chips">
         {TIPOS.map((t) => (

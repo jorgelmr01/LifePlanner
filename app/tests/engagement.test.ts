@@ -2,8 +2,10 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { db, uid } from '../src/db/db'
 import { DIA_MS, claveDia, inicioDia } from '../src/logic/dates'
 import {
+  MAX_ESCUDOS,
   buscarRecuerdo,
   cargarDatosMisiones,
+  estadoRacha,
   evaluarMisiones,
   misionesDelDia,
   preguntaDelDia,
@@ -19,22 +21,56 @@ beforeEach(async () => {
 
 const dia = (offset: number) => ({ dia: claveDia(inicioDia() - offset * DIA_MS) })
 
-describe('rachaFlexible', () => {
+/** días activos consecutivos que terminan hace `desde` días */
+const rango = (desde: number, cuantos: number) =>
+  [...Array(cuantos)].map((_, i) => dia(desde + i))
+
+describe('rachaFlexible / estadoRacha', () => {
   it('cuenta días consecutivos con actividad', () => {
     expect(rachaFlexible([dia(0), dia(1), dia(2)])).toBe(3)
   })
-  it('un día de descanso NO rompe la racha', () => {
-    // activo hoy, descanso ayer, activo antier y antes
-    expect(rachaFlexible([dia(0), dia(2), dia(3)])).toBe(3)
+  it('un día de descanso NO rompe la racha (gratis, sin gastar escudo)', () => {
+    const r = estadoRacha([dia(0), dia(2), dia(3)])
+    expect(r.racha).toBe(3)
+    expect(r.escudos).toBe(0) // racha < 7: aún no gana escudos, y no necesitó gastar
   })
-  it('dos días seguidos sin actividad SÍ la rompen', () => {
+  it('dos días sin actividad y sin escudos SÍ la rompen', () => {
     expect(rachaFlexible([dia(0), dia(3), dia(4)])).toBe(1)
   })
   it('hoy sin actividad todavía no rompe (día en curso)', () => {
     expect(rachaFlexible([dia(1), dia(2)])).toBe(2)
   })
   it('sin actividad devuelve 0', () => {
-    expect(rachaFlexible([])).toBe(0)
+    expect(estadoRacha([])).toEqual({ racha: 0, escudos: 0, diasActivosTotales: 0 })
+  })
+
+  it('gana 1 escudo cada 7 días de racha, con tope', () => {
+    expect(estadoRacha(rango(0, 7)).escudos).toBe(1)
+    expect(estadoRacha(rango(0, 14)).escudos).toBe(2)
+    expect(estadoRacha(rango(0, 100)).escudos).toBe(MAX_ESCUDOS)
+  })
+
+  it('un retiro de 4 días sobrevive con escudos (1 libre + 3 escudos)', () => {
+    // 21 días de racha (3 escudos), luego 4 días fuera, activo hoy
+    const eventos = [...rango(5, 21), dia(0)]
+    const r = estadoRacha(eventos)
+    expect(r.racha).toBe(22) // la racha continúa
+    expect(r.escudos).toBe(0) // gastó los 3
+  })
+
+  it('sin escudos suficientes el retiro largo rompe, pero los días totales quedan', () => {
+    // 7 días de racha (1 escudo), luego 5 días fuera → 1 libre + 1 escudo + roto
+    const eventos = [...rango(6, 7), dia(0)]
+    const r = estadoRacha(eventos)
+    expect(r.racha).toBe(1) // reinició hoy
+    expect(r.diasActivosTotales).toBe(8) // el acumulado histórico no se pierde
+  })
+
+  it('una semana completa fuera sobrevive con el colchón lleno', () => {
+    // 42 días de racha (6 escudos) + 7 días fuera + activo hoy
+    const eventos = [...rango(8, 42), dia(0)]
+    const r = estadoRacha(eventos)
+    expect(r.racha).toBe(43)
   })
 })
 
@@ -103,7 +139,8 @@ describe('misionesDelDia', () => {
       { id: 'a2', nombre: 'Fe', icono: '🙏', color: '#A855F7', visible: true, orden: 1, prompts: [] },
     ])
     await db.personas.add({
-      id: 'p1', nombre: 'Carlos', circulo: 'cercano', loQueImporta: '', preguntarProxima: '',
+      id: 'p1', nombre: 'Carlos', circulo: 'cercano', contextos: [], comoConocimos: '',
+      loQueImporta: '', notas: '', datos: [], preguntarProxima: '',
       frecuenciaDias: 14, areaIds: [], estado: 'activa', silenciarSugerencias: false,
     })
     const datos = await cargarDatosMisiones()

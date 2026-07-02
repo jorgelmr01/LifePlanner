@@ -51,6 +51,19 @@ db.version(2)
       })
   })
 
+// v3: la persona se vuelve ficha completa (hub de relaciones)
+db.version(3).upgrade(async (tx) => {
+  await tx
+    .table('personas')
+    .toCollection()
+    .modify((p) => {
+      if (!Array.isArray(p.contextos)) p.contextos = []
+      if (typeof p.comoConocimos !== 'string') p.comoConocimos = ''
+      if (typeof p.notas !== 'string') p.notas = ''
+      if (!Array.isArray(p.datos)) p.datos = []
+    })
+})
+
 export const uid = () =>
   (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now())
 
