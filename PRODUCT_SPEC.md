@@ -1,7 +1,11 @@
 # Life Copilot - Especificación de Producto Completa
 
 > Documento consolidado con estructura, pantallas, features, modelo de datos y decisiones de diseño.
-> Última actualización: Enero 2026
+> Última actualización: Julio 2026
+>
+> **Nota de revisión (julio 2026):** el proyecto pivotó de app nativa Flutter a **PWA instalable**
+> (iOS/Android) y sumó la **capa RPG** descrita en la [sección 14](#14-capa-rpg-y-pivote-a-pwa-2026),
+> que ajusta la postura de gamificación de las secciones anteriores. Ver [ADR-006](docs/adrs/ADR-006-pwa-pivot.md).
 
 ---
 
@@ -20,6 +24,7 @@
 11. [Roadmap (MVP → V1 → V2)](#11-roadmap-mvp--v1--v2)
 12. [Decisiones de Diseño](#12-decisiones-de-diseño)
 13. [Consideraciones Técnicas](#13-consideraciones-técnicas)
+14. [Capa RPG y Pivote a PWA (2026)](#14-capa-rpg-y-pivote-a-pwa-2026)
 
 ---
 
@@ -2748,6 +2753,65 @@ Estoy aquí para registrar lo que quieras compartir."
 | **Sugerencia** | Recomendación accionable del sistema |
 | **Copiloto** | Asistente AI opcional |
 | **Check-in** | Registro rápido de estado (mood, energía, etc.) |
+
+---
+
+## 14. Capa RPG y Pivote a PWA (2026)
+
+> Addendum de julio 2026, al reactivar el proyecto. Complementa (y donde choca, sustituye) lo anterior.
+
+### 14.1 Nueva framing: tu vida como personaje de RPG
+
+La visión evolucionó: Life Copilot presenta tu vida como un **personaje de RPG donde el objetivo lo defines tú**.
+
+| Concepto RPG | En la app |
+|--------------|-----------|
+| **Personaje** | Tú; nivel global calculado del XP total |
+| **Atributos** | Las Áreas (Salud, Trabajo, Fe, Relaciones…), cada una con nivel y barra de XP |
+| **XP** | Toda actividad real: entrada +10, ritmo +15, interacción +15, avance de meta +25, check-in +5, sugerencia completada +10 |
+| **Misiones diarias/semanales** | Los Ritmos |
+| **Quests** | Las Metas (definidas por el usuario) |
+| **Gremio** | Las Personas |
+| **Mapa de balance** | Radar de actividad de 14 días por área |
+
+**Fórmula de nivel:** `nivel = ⌊√(xp/50)⌋ + 1` (cada nivel cuesta progresivamente más).
+
+### 14.2 Gamificación sin culpa (ajuste al principio 2.6)
+
+El principio anti-gamificación original se matiza: **sí hay niveles y XP, pero diseñados para no generar ansiedad**:
+
+- Los niveles **nunca bajan**; la inactividad no castiga, solo deja de sumar
+- No hay rachas punitivas: el heatmap de 7 días es informativo ("5 de 7 días con actividad"), no una racha que se "rompe"
+- No hay rankings ni comparación social
+- El indicador de atención por área usa verde/amarillo/naranja, nunca rojo
+- Toda la capa RPG se puede ocultar desde Ajustes (`mostrarNiveles`)
+
+### 14.3 Re-balanceo: el corazón del producto
+
+El diferenciador es que la app **identifica dónde te estás quedando atrás y te ayuda a re-balancearte**:
+
+1. **Radar de balance** (pantalla Personaje): actividad de 14 días por área, normalizada; el área más hundida se señala con acceso directo
+2. **Motor de sugerencias** (5 reglas locales, sin AI):
+   - *Reconexión*: "No has platicado con Carlos en 45 días. Mándale un mensaje para ponerse al día."
+   - *Consistencia*: "¿Por qué no vas a hora santa esta semana?" (ritmos <50% de lo esperado en 7 días)
+   - *Balance*: "Tu área 🙏 Fe se está quedando atrás…" (área con <25% del XP del área top, cuando el top ≥40 XP/14d)
+   - *Cumpleaños*: aviso con ≤3 días de anticipación
+   - *Meta estancada*: meta activa sin avance en 14 días, recordando su próximo paso
+3. **Ciclo de la sugerencia**: pendiente → hecha (+10 XP) / pospuesta (reaparece al vencer) / descartada (no se repite en 7 días). Completar la acción real (marcar el ritmo, registrar el contacto) también resuelve la sugerencia.
+
+### 14.4 Plataforma: PWA en lugar de app nativa
+
+- **Por qué**: distribución sin stores (un link instala en iOS y Android), un solo stack web, iteración inmediata. Detalles y trade-offs en [ADR-006](docs/adrs/ADR-006-pwa-pivot.md).
+- **Qué cambia del spec original**:
+  - Entrada por voz (C3) y adjuntos multimedia → V1 (dependen de APIs de captura del navegador)
+  - Notificaciones push → V1 y solo donde el navegador lo permita; en el MVP las sugerencias viven en la app
+  - PIN/biometría (K2) → V1 con WebAuthn; el MVP confía en el bloqueo del dispositivo
+  - Copiloto AI (J1-J4) → V1, con API key propia del usuario, llamadas directas desde el cliente
+- **Qué se mantiene**: modelo de datos (§3), navegación de 5 tabs (§4), sistema de sugerencias (§6), principios (§2), local-first con exportación JSON.
+
+### 14.5 Alcance del MVP implementado (julio 2026)
+
+Onboarding (4 pasos), Hoy (check-in mañana/noche, misiones, semana, gente, sugerencias), Registro (timeline unificado + entrada con áreas/personas/mood/privacidad), Áreas (lista/detalle/crear), Personas (lista/detalle/interacciones/editar/archivar/silenciar), Metas (lista/detalle/progreso/completar), Personaje (radar, niveles, días activos), Ajustes (nombre, tema, capa RPG, export/import, borrado), captura rápida, PWA offline instalable.
 
 ---
 

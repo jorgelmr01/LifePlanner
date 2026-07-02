@@ -345,5 +345,32 @@ Pantalla J4 (Preferencias del copiloto):
 
 ---
 
+## Decisiones del pivote 2026 (PWA + capa RPG)
+
+### A. Plataforma: PWA en lugar de Flutter
+
+**Decisión:** la app se construye como PWA instalable (iOS/Android) con React + Vite + IndexedDB. Ver [ADR-006](docs/adrs/ADR-006-pwa-pivot.md).
+
+**Justificación:** distribución sin stores, un solo stack, iteración inmediata; el local-first se mantiene con IndexedDB + exportación JSON.
+
+### B. Gamificación: de "anti-gamificación" a "gamificación sin culpa"
+
+**Decisión:** se introduce una capa RPG (XP, niveles por área, radar de balance), pero con reglas que evitan la ansiedad:
+
+- Los niveles **nunca bajan**; la inactividad solo deja de sumar
+- Sin rachas punitivas: el heatmap semanal informa, no castiga
+- Sin rankings, sin comparación social, sin rojo alarmista
+- Toggle en Ajustes para ocultar toda la capa RPG
+
+**Justificación:** el usuario pidió explícitamente el framing "tu vida como personaje de RPG donde el objetivo lo defines tú". La versión original prohibía puntos y niveles por miedo a la culpa; la solución es gamificar el *progreso* (que solo suma) y nunca el *fallo* (que sigue sin existir como concepto). Esto matiza la fila "Streaks" y el principio 2.6 del spec.
+
+### C. Sugerencias de re-balanceo como feature central
+
+**Decisión:** el motor de sugerencias por reglas (reconexión, consistencia, balance, cumpleaños, metas estancadas) es la funcionalidad núcleo del MVP y funciona 100% local, sin AI.
+
+**Justificación:** los mensajes tipo "no has platicado con X en Y días" y "¿por qué no vas a hora santa esta semana?" son la propuesta de valor; no requieren LLM, solo datos y reglas. El copiloto AI pasa a V1 como capa conversacional opcional encima del mismo motor.
+
+---
+
 *Decisiones tomadas durante el diseño conceptual del producto.*
 *Sujetas a revisión durante la implementación y testing con usuarios.*

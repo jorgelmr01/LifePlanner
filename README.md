@@ -1,273 +1,148 @@
 # Life Copilot
 
-> Un copiloto personal para registrar, dar seguimiento, y recibir sugerencias sobre todas las dimensiones de tu vida.
+> Tu vida como personaje de RPG: registra, da seguimiento y recibe sugerencias para re-balancearte.
+> PWA instalable en iOS y Android — sin stores, sin cuentas, local-first.
 
 ---
 
-## Descripción
+## La idea
 
-Life Copilot es una aplicación móvil que combina:
+Tú defines el objetivo; la app te ayuda a alcanzarlo detectando dónde te estás quedando atrás:
 
-- **Journaling**: Captura de momentos, reflexiones y notas
-- **Tracking de hábitos**: Seguimiento flexible de ritmos y prácticas
-- **Gestión de relaciones**: Mantener contacto con personas importantes
-- **Objetivos**: Metas con progreso y próximos pasos
-- **Copiloto AI opcional**: Asistente conversacional para registro y sugerencias
+> *"No has platicado con Carlos en 45 días. Mándale un mensaje para ponerse al día."*
+> *"¿Por qué no vas a hora santa esta semana?"*
+> *"Tu área 🙏 Fe se está quedando atrás. Una entrada o un ritmo pequeño la reactivan."*
 
-Todo en un sistema coherente donde las dimensiones de vida (Salud, Trabajo, Fe, Relaciones, etc.) se conectan entre sí.
+Cada dimensión de tu vida (Salud, Trabajo, Fe, Relaciones…) es un **atributo de tu personaje** que sube de nivel con tu actividad real. Un radar de balance muestra de un vistazo qué estás descuidando.
+
+### Los 5 bloques
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                 ÁREAS (atributos del personaje)                  │
+│  Salud 💪 Nv4 · Trabajo 💼 Nv6 · Fe 🙏 Nv2 · Relaciones 👥 Nv3  │
+├─────────────────────────────────────────────────────────────────┤
+│   ┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐ │
+│   │ ENTRADAS │◄──►│  RITMOS  │◄──►│  METAS   │◄──►│ PERSONAS │ │
+│   │ (Journal)│    │(Misiones │    │(Objetivos│    │ (Gremio) │ │
+│   │          │    │recurrent)│    │  que TÚ  │    │          │ │
+│   │          │    │          │    │ defines) │    │          │ │
+│   └──────────┘    └──────────┘    └──────────┘    └──────────┘ │
+│          Todo da XP a tus áreas · Todo se relaciona N:N         │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Cómo funciona la capa RPG
+
+- **XP**: marcar un ritmo +15, escribir una entrada +10, registrar un contacto +15, avanzar una meta +25, check-in +5.
+- **Niveles por área**: suben con XP acumulado y **nunca bajan** — sin culpa, sin rachas punitivas.
+- **Balance**: el radar de 14 días y el motor de sugerencias detectan el área más descuidada y te proponen la acción mínima para reactivarla.
+
+### Motor de sugerencias (sin AI, 100% local)
+
+| Regla | Dispara cuando… |
+|-------|-----------------|
+| 👤 Reconexión | Pasaron más días del contacto deseado con una persona |
+| 🔁 Consistencia | Un ritmo va a menos del 50% de lo esperado esta semana |
+| ⚖️ Balance | Un área casi no tiene actividad mientras otras van bien |
+| 🎂 Cumpleaños | El cumpleaños de alguien es en ≤3 días |
+| 🎯 Meta estancada | Una meta activa lleva 14 días sin avance |
+
+Cada sugerencia se puede hacer, posponer o descartar; el copiloto propone, tú decides.
+
+---
+
+## La app (`app/`)
+
+PWA con **React 19 + TypeScript + Vite + IndexedDB (Dexie)**. Ver [docs/TECHNICAL_STACK.md](docs/TECHNICAL_STACK.md).
+
+```bash
+cd app
+npm install
+npm run dev        # desarrollo → http://localhost:5173
+npm run build      # producción → dist/ (sitio estático)
+npm run preview    # probar el build con service worker
+```
+
+**Instalar en el celular** (tras publicar `dist/` en cualquier hosting HTTPS):
+
+- **iPhone**: Safari → Compartir → *Agregar a pantalla de inicio*
+- **Android**: Chrome → menú ⋮ → *Instalar app*
+
+Funciona offline; los datos viven solo en tu dispositivo (respaldo JSON desde Ajustes).
+
+### Pantallas
+
+| Tab | Qué hay |
+|-----|---------|
+| ☀️ **Hoy** | Saludo, nivel, check-in de mañana/noche, misiones del día, ritmos semanales, gente que necesita atención, inbox de sugerencias |
+| 📖 **Registro** | Timeline unificado (entradas, ritmos, contactos) con filtro por área + nueva entrada con prompts |
+| 🗺️ **Áreas** | Atributos con nivel, barra de XP e indicador de atención (alta/media/baja) |
+| 👥 **Personas** | CRM personal: círculos, frecuencia de contacto deseada, historial, cumpleaños |
+| 🧭 **Personaje** | Radar de balance de vida, nivel global, días activos, atributos, acceso a Metas 🎯 |
+
+Botón **+** flotante: captura rápida (entrada, marcar ritmo, interacción, meta, ritmo nuevo).
 
 ---
 
 ## Documentación
 
-### Documentos de Producto
-
+### Producto
 | Documento | Descripción |
 |-----------|-------------|
-| [PRODUCT_SPEC.md](PRODUCT_SPEC.md) | Especificación completa del producto: modelo de datos, catálogo de pantallas (38), features, roadmap |
-| [DESIGN_DECISIONS.md](DESIGN_DECISIONS.md) | Decisiones de diseño clave y respuestas a preguntas abiertas |
-| [SCREEN_FLOWS.md](SCREEN_FLOWS.md) | Flujos de navegación y casos de uso detallados |
+| [PRODUCT_SPEC.md](PRODUCT_SPEC.md) | Especificación completa (modelo de datos, 38 pantallas, features, roadmap) + §14 capa RPG |
+| [DESIGN_DECISIONS.md](DESIGN_DECISIONS.md) | Decisiones de diseño, incl. gamificación sin culpa (2026) |
+| [SCREEN_FLOWS.md](SCREEN_FLOWS.md) | Flujos de navegación y casos de uso |
 
-### Sistema de Diseño UI/UX (Fase 2) ✅
-
+### Diseño UI/UX
 | Documento | Descripción |
 |-----------|-------------|
-| [design/README.md](design/README.md) | Índice y resumen del sistema de diseño |
-| [design/DESIGN_SYSTEM.md](design/DESIGN_SYSTEM.md) | Tokens, colores, tipografía, espaciado, iconografía |
-| [design/COMPONENT_LIBRARY.md](design/COMPONENT_LIBRARY.md) | 28 componentes (18 base + 10 específicos) |
-| [design/SCREEN_SPECS.md](design/SCREEN_SPECS.md) | Especificaciones detalladas de 38 pantallas |
-| [design/PROTOTYPE_FLOWS.md](design/PROTOTYPE_FLOWS.md) | Animaciones, transiciones, haptics |
-| [design/ASSETS_SPEC.md](design/ASSETS_SPEC.md) | Iconos, ilustraciones, app icon, store assets |
+| [design/DESIGN_SYSTEM.md](design/DESIGN_SYSTEM.md) | Tokens, colores, tipografía (implementados en `app/src/styles.css`) |
+| [design/COMPONENT_LIBRARY.md](design/COMPONENT_LIBRARY.md) | 28 componentes |
+| [design/SCREEN_SPECS.md](design/SCREEN_SPECS.md) | Especificaciones de 38 pantallas |
+| [design/PROTOTYPE_FLOWS.md](design/PROTOTYPE_FLOWS.md) | Animaciones y transiciones |
+| [design/ASSETS_SPEC.md](design/ASSETS_SPEC.md) | Iconos e ilustraciones |
 
-### Contenido por documento
-
-#### PRODUCT_SPEC.md (Documento principal)
-1. Visión y propuesta de valor
-2. Principios de diseño
-3. Modelo de datos completo (5 objetos + relaciones)
-4. Navegación y arquitectura de información
-5. Catálogo de 38 pantallas con wireframes textuales
-6. Sistema de sugerencias
-7. Comportamiento del copiloto AI
-8. Flujos de usuario
-9. Features por categoría (MVP/V1/V2)
-10. Plantillas predefinidas (5)
-11. Roadmap
-12. Decisiones de diseño
-13. Consideraciones técnicas
-
-#### DESIGN_DECISIONS.md
-- Respuestas a las 5 preguntas abiertas:
-  1. Notificaciones por persona (silenciar individualmente)
-  2. Historial del copiloto (solo resultados por defecto)
-  3. Compartir (no en MVP, limitado en V2)
-  4. Multi-dispositivo (V2 con sync simple)
-  5. Monetización (pago único)
-- Decisiones adicionales sobre tono, privacidad, gamificación, etc.
-
-#### SCREEN_FLOWS.md
-- 10 flujos de usuario detallados con diagramas ASCII
-- Tiempos estimados por flujo
-- Navegación entre pantallas
-
----
-
-## Estructura del Producto
-
-### Los 5 Bloques (Objetos principales)
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                         ÁREAS                                    │
-│  (Contenedores: Salud, Trabajo, Fe, Relaciones, etc.)           │
-├─────────────────────────────────────────────────────────────────┤
-│   ┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐ │
-│   │ ENTRADAS │◄──►│  RITMOS  │◄──►│  METAS   │◄──►│ PERSONAS │ │
-│   │ (Journal)│    │ (Hábitos)│    │(Objetivos)│   │(Relacion)│ │
-│   └──────────┘    └──────────┘    └──────────┘    └──────────┘ │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-### Navegación
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│ [Hoy] [Registro] [Áreas] [Personas] [Copiloto]    [+]      │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### Pantallas (38 total)
-
-- **Onboarding**: 6 pantallas (A1-A6)
-- **Hoy**: 3 pantallas (B1-B3)
-- **Registro**: 4 pantallas (C1-C4)
-- **Áreas**: 3 pantallas (D1-D3)
-- **Ritmos**: 3 pantallas (E1-E3)
-- **Metas**: 3 pantallas (F1-F3)
-- **Personas**: 3 pantallas (G1-G3)
-- **Ideas**: 2 pantallas (H1-H2)
-- **Insights**: 2 pantallas (I1-I2)
-- **Copiloto**: 4 pantallas (J1-J4)
-- **Ajustes**: 2 pantallas (K1-K2)
-- **Auxiliares**: 3 pantallas (L1-L3)
-
----
-
-## Roadmap
-
-### MVP - Lo mínimo mágico
-- Dashboard "Hoy"
-- Journal y timeline
-- Ritmos (hábitos/prácticas)
-- Personas básico
-- Copiloto AI con confirmación
-- Sugerencias por reglas
-
-### V1 - Más redondo
-- Metas/proyectos completos
-- Insights y revisión semanal
-- Plantillas
-- Calendario y búsqueda
-- Privacidad avanzada
-- Celebraciones ("Momentos")
-
-### V2 - Pro
-- Integraciones (calendario, salud)
-- Sync multi-dispositivo
-- Memoria del copiloto
-- Análisis profundo con AI
-- Automatizaciones
+### Técnica
+| Documento | Descripción |
+|-----------|-------------|
+| [docs/TECHNICAL_STACK.md](docs/TECHNICAL_STACK.md) | Stack PWA actual |
+| [docs/DEVELOPMENT_SETUP.md](docs/DEVELOPMENT_SETUP.md) | Guía de desarrollo |
+| [docs/adrs/ADR-006-pwa-pivot.md](docs/adrs/ADR-006-pwa-pivot.md) | **Pivote a PWA** (supersede ADR-001/002/004/005) |
+| [docs/adrs/](docs/adrs/) | ADRs históricos (Flutter, marcados como superseded) |
 
 ---
 
 ## Principios clave
 
-1. **AI siempre opcional**: Sin AI la app funciona completa
-2. **Confirmación obligatoria**: El copiloto propone, el usuario aprueba
-3. **Anti-gamificación**: Sin streaks prominentes, sin puntos, sin culpa
-4. **Privacidad por defecto**: Datos locales, exportación fácil
-5. **Fricción mínima**: Captura rápida en <10 segundos
+1. **Tú defines el objetivo**: la app no impone metas; te ayuda con las tuyas
+2. **Gamificación sin culpa**: los niveles suben, nunca bajan; sin rachas punitivas ni rojo alarmista
+3. **El copiloto propone, tú decides**: toda sugerencia se puede hacer, posponer o descartar
+4. **Privacidad por defecto**: local-first, sin cuentas, sin nube, exportación JSON
+5. **Fricción mínima**: captura rápida en <10 segundos; lo profundo siempre es opcional
+6. **AI opcional (V1)**: sin AI la app funciona completa
 
 ---
 
-## Stack Técnico
+## Estado del proyecto
 
-El proyecto utiliza las siguientes tecnologías (definidas en [FASE 3 - Setup Técnico](docs/TECHNICAL_STACK.md)):
+- [x] **FASE 1** — Validación y research (PRODUCT_SPEC, DESIGN_DECISIONS, SCREEN_FLOWS)
+- [x] **FASE 2** — Diseño UI/UX (design system, 28 componentes, 38 pantallas)
+- [x] **FASE 3** — Setup técnico *(revisado: pivote de Flutter a PWA, [ADR-006](docs/adrs/ADR-006-pwa-pivot.md))*
+- [x] **FASE 4** — MVP funcional ← **julio 2026**
+  - [x] Onboarding (personaje, áreas, ritmos, gremio)
+  - [x] Hoy: check-in, misiones diarias/semanales, sugerencias
+  - [x] Registro (timeline + entradas con áreas/personas/privacidad)
+  - [x] Áreas, Personas, Metas, Personaje (radar de balance)
+  - [x] Capa RPG: XP, niveles, balance
+  - [x] Motor de sugerencias por reglas (5 reglas)
+  - [x] PWA: manifest, service worker, offline, iconos
+  - [x] Export/import JSON, modo oscuro
+- [ ] **V1** — Copiloto AI opcional (API key propia), PIN/WebAuthn, búsqueda, calendario, insights
+- [ ] **V2** — Sync multi-dispositivo cifrado, integraciones, automatizaciones
 
-| Categoría | Tecnología | 
-|-----------|------------|
-| **Framework** | Flutter 3.16+ (Dart) |
-| **Base de Datos** | SQLite + Drift + SQLCipher |
-| **State Management** | Riverpod |
-| **AI** | OpenAI APIs (GPT-4 + Whisper) |
-| **Autenticación** | Local PIN + Biometrics |
-
-### ADRs (Architecture Decision Records)
-
-- [ADR-001: Framework Selection](docs/adrs/ADR-001-framework-selection.md) - Flutter
-- [ADR-002: Data Persistence](docs/adrs/ADR-002-data-persistence.md) - SQLite/Drift
-- [ADR-003: AI Integration](docs/adrs/ADR-003-ai-integration.md) - OpenAI
-- [ADR-004: Authentication](docs/adrs/ADR-004-authentication.md) - Local PIN/Biometrics
-- [ADR-005: State Management](docs/adrs/ADR-005-state-management.md) - Riverpod
-
----
-
-## Estructura del Repositorio
-
-```
-Life Planner/
-├── README.md                    ← Este archivo (índice)
-├── PRODUCT_SPEC.md              ← Especificación completa del producto
-├── DESIGN_DECISIONS.md          ← Decisiones de diseño
-├── SCREEN_FLOWS.md              ← Flujos de navegación
-│
-├── design/
-│   ├── README.md                ← Índice del sistema de diseño
-│   ├── DESIGN_SYSTEM.md         ← Tokens, colores, tipografía
-│   ├── COMPONENT_LIBRARY.md     ← 28 componentes UI
-│   ├── SCREEN_SPECS.md          ← Especificaciones de 38 pantallas
-│   ├── PROTOTYPE_FLOWS.md       ← Animaciones y transiciones
-│   └── ASSETS_SPEC.md           ← Iconos, ilustraciones, store assets
-│
-├── docs/
-│   ├── DEVELOPMENT_SETUP.md     ← Guía de configuración para desarrollo
-│   ├── TECHNICAL_STACK.md       ← Resumen del stack técnico
-│   └── adrs/                    ← Architecture Decision Records
-│       ├── ADR-001-framework-selection.md
-│       ├── ADR-002-data-persistence.md
-│       ├── ADR-003-ai-integration.md
-│       ├── ADR-004-authentication.md
-│       └── ADR-005-state-management.md
-│
-└── life_copilot/                ← Proyecto Flutter
-    ├── lib/
-    │   ├── core/                ← Theme, router, l10n
-    │   ├── features/            ← Módulos de funcionalidad
-    │   ├── shared/              ← Widgets y modelos compartidos
-    │   └── data/                ← Database y repositorios
-    ├── test/                    ← Tests
-    ├── assets/                  ← Imágenes, iconos, fuentes
-    ├── .github/workflows/       ← CI/CD pipelines
-    ├── pubspec.yaml             ← Dependencias
-    └── analysis_options.yaml    ← Reglas de linting
-```
+> El prototipo Flutter original (`life_copilot/`) fue retirado en el pivote; vive en el historial de git (tag `V0.0.0`).
 
 ---
 
-## Desarrollo
-
-### Requisitos
-
-- Flutter 3.16.0+
-- Dart 3.2.0+
-- Android Studio / Xcode (para emuladores)
-
-### Configuración rápida
-
-```bash
-# Clonar repositorio
-git clone https://github.com/[org]/life-copilot.git
-cd life-copilot/life_copilot
-
-# Instalar dependencias
-flutter pub get
-
-# Ejecutar en modo debug
-flutter run
-```
-
-Para instrucciones detalladas, ver [DEVELOPMENT_SETUP.md](docs/DEVELOPMENT_SETUP.md).
-
----
-
-## Estado del Proyecto
-
-### Completado ✓
-- [x] **FASE 1: Validación y Research**
-  - [x] Especificación de producto (PRODUCT_SPEC.md)
-  - [x] Decisiones de diseño (DESIGN_DECISIONS.md)
-  - [x] Flujos de pantallas (SCREEN_FLOWS.md)
-- [x] **FASE 2: Diseño UI/UX** ← Recién completado
-  - [x] Sistema de diseño completo (design/DESIGN_SYSTEM.md)
-  - [x] Librería de componentes - 28 componentes (design/COMPONENT_LIBRARY.md)
-  - [x] Especificaciones de 38 pantallas (design/SCREEN_SPECS.md)
-  - [x] Flujos de prototipo y animaciones (design/PROTOTYPE_FLOWS.md)
-  - [x] Especificaciones de assets (design/ASSETS_SPEC.md)
-- [x] **FASE 3: Setup Técnico**
-  - [x] Definición de stack técnico
-  - [x] ADRs documentados
-  - [x] Proyecto Flutter configurado
-  - [x] Design system implementado en código
-  - [x] CI/CD con GitHub Actions
-
-### En progreso
-- [ ] FASE 4: Desarrollo MVP
-  - [ ] Base de datos con Drift
-  - [ ] Onboarding (A1-A6)
-  - [ ] Dashboard (B1-B3)
-  - [ ] Copiloto AI (J1-J4)
-
----
-
-*Documentación y código fuente para Life Copilot.*
-*Última actualización: Enero 2026*
+*Última actualización: Julio 2026*

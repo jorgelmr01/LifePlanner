@@ -1,6 +1,6 @@
 # ADR-003: AI Integration Approach
 
-**Status:** Accepted  
+**Status:** Deferred to V1 — ver [ADR-006](ADR-006-pwa-pivot.md); el MVP usa sugerencias por reglas locales sin AI  
 **Date:** January 2026  
 **Decision Makers:** Development Team
 

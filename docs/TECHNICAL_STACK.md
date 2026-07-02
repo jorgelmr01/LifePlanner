@@ -1,263 +1,91 @@
 # Life Copilot - Stack Técnico
 
-> Resumen de las decisiones técnicas tomadas para el proyecto Life Copilot.
-> Versión: 1.0
-> Fecha: Enero 2026
+> FASE 3 (revisada): stack para la PWA. Sustituye al stack Flutter original (ver [ADR-006](adrs/ADR-006-pwa-pivot.md)).
+> Última actualización: Julio 2026
 
 ---
 
 ## Resumen Ejecutivo
 
-| Categoría | Decisión | Justificación |
-|-----------|----------|---------------|
-| **Framework** | Flutter (Dart) | Performance nativa, single codebase, excelente soporte para animaciones |
-| **Base de Datos** | SQLite + Drift + SQLCipher | Local-first, relacional, encriptado |
-| **State Management** | Riverpod | Type-safe, testeable, sin contexto requerido |
-| **AI Integration** | OpenAI APIs (GPT-4 + Whisper) | Calidad superior, user-provided API keys |
-| **Autenticación** | Local PIN + Biometrics | Sin backend, máxima privacidad |
+| Categoría | Tecnología | Justificación |
+|-----------|------------|---------------|
+| **Plataforma** | PWA instalable (iOS Safari / Android Chrome) | Un solo link, sin stores, offline-first |
+| **Framework** | React 19 + TypeScript + Vite 8 | Iteración rápida, tipado estricto, build estático |
+| **Base de datos** | IndexedDB vía Dexie 4 | Local-first en el navegador, consultas indexadas |
+| **Estado / reactividad** | React hooks + `dexie-react-hooks` | `useLiveQuery` re-renderiza al cambiar la BD; sin store global |
+| **Offline / instalación** | `vite-plugin-pwa` (Workbox) + Web App Manifest | Precache de assets, `autoUpdate` del service worker |
+| **AI** | Diferido a V1 (ADR-003) | El MVP usa el motor de sugerencias por reglas |
 
 ---
 
-## 1. Framework: Flutter
+## 1. Plataforma: PWA
 
-**Versión objetivo:** Flutter 3.16.0+ / Dart 3.2.0+
+- **Instalación**: iOS → Safari → Compartir → "Agregar a pantalla de inicio"; Android → Chrome → "Instalar app".
+- **Standalone**: `display: standalone`, `viewport-fit=cover` y safe-areas para que se sienta nativa.
+- **Offline**: el service worker precachea el shell completo; los datos ya son locales.
+- **Riesgo conocido**: Safari puede purgar el storage de sitios no instalados tras ~7 días sin uso. Mitigación: instalar la app, `navigator.storage.persist()` y exportación JSON desde Ajustes.
 
-### Por qué Flutter
+## 2. Base de Datos: IndexedDB + Dexie
 
-- **Rendimiento**: Compilado a código ARM nativo, 60fps consistentes
-- **Código compartido**: ~95% de código compartido entre iOS y Android
-- **Design System**: La arquitectura de widgets permite implementar el design system de forma consistente
-- **Hot Reload**: Desarrollo iterativo rápido
-- **Ecosistema maduro**: Plugins para todas las funcionalidades requeridas
+Tablas (ver `app/src/db/db.ts`):
 
-### Estructura del Proyecto
+| Tabla | Contenido |
+|-------|-----------|
+| `areas` | Dimensiones de vida (atributos del personaje) |
+| `entries` | Journal y check-ins (mañana/noche) |
+| `ritmos` / `ritmoLogs` | Hábitos y sus marcas diarias (índice compuesto `[ritmoId+dia]`) |
+| `metas` | Objetivos con progreso y próximo paso |
+| `personas` / `interacciones` | CRM personal y contactos registrados |
+| `sugerencias` | Inbox del motor de reglas (pendiente/hecha/pospuesta/descartada) |
+| `xpEvents` | Ledger de XP por área (alimenta niveles y balance) |
+| `ajustes` | Preferencias (nombre, tema, capa RPG visible) |
 
-```
-lib/
-├── core/           # Fundamentos (theme, router, l10n)
-├── features/       # Módulos por funcionalidad
-├── shared/         # Código compartido
-└── data/           # Capa de datos
-```
+Respaldo: exportación/importación JSON completa desde Ajustes.
 
-**ADR relacionado:** [ADR-001-framework-selection.md](adrs/ADR-001-framework-selection.md)
+## 3. Capa RPG (lógica local)
 
----
+- `logic/xp.ts`: XP por acción (entrada 10, ritmo 15, interacción 15, meta 25, check-in 5), nivel = `⌊√(xp/50)⌋+1`, estado de atención por área (alta/media/baja según XP de 14 días).
+- `logic/suggestions.ts`: motor de reglas — reconexión (contacto vencido), consistencia (ritmo < 50% de lo esperado en 7 días), balance (área rezagada vs. las demás), cumpleaños, metas estancadas (14 días sin avance). Idempotente; corre en cada apertura.
+- Filosofía: los niveles nunca bajan, no hay rachas punitivas (DESIGN_DECISIONS.md).
 
-## 2. Base de Datos: SQLite + Drift + SQLCipher
+## 4. Design System
 
-### Stack de Datos
+Los tokens de `design/DESIGN_SYSTEM.md` están implementados como CSS custom properties en `app/src/styles.css` (colores, tipografía Inter/system-ui, espaciado, radios, modo oscuro).
 
-| Componente | Rol |
-|------------|-----|
-| **SQLite** | Motor de base de datos |
-| **Drift** | ORM type-safe para Dart |
-| **SQLCipher** | Encriptación AES-256 |
+## 5. Dependencias
 
-### Características
+```jsonc
+// dependencies
+"react", "react-dom"          // UI
+"dexie", "dexie-react-hooks"  // IndexedDB reactiva
 
-- **Local-first**: Todos los datos en el dispositivo
-- **Relacional**: Soporte completo para relaciones N:N del modelo de datos
-- **Full-text search**: Via FTS5 para búsqueda de entradas
-- **Migraciones**: Controladas via Drift
-- **Export/Import**: Fácil extracción a JSON/CSV
-
-### Esquema Principal
-
-5 objetos principales con relaciones N:N:
-- `areas` - Dimensiones de vida
-- `entradas` - Journal entries
-- `ritmos` - Hábitos/ritmos
-- `metas` - Objetivos
-- `personas` - Relaciones
-
-**ADR relacionado:** [ADR-002-data-persistence.md](adrs/ADR-002-data-persistence.md)
-
----
-
-## 3. State Management: Riverpod
-
-### Por qué Riverpod
-
-- **Compile-time safety**: Errores detectados antes de runtime
-- **Testing**: ProviderContainer permite tests aislados
-- **Sin Context**: Servicios pueden acceder a state sin widget
-- **Auto-disposal**: Limpieza automática de recursos
-
-### Tipos de Provider Usados
-
-```dart
-// State simple
-StateProvider<ThemeMode>
-
-// Datos async (DB/API)
-FutureProvider<List<Entry>>
-
-// Streams (tiempo real)
-StreamProvider<List<Rhythm>>
-
-// Lógica compleja
-NotifierProvider<DashboardNotifier, DashboardState>
+// devDependencies
+"vite", "@vitejs/plugin-react", "typescript"
+"vite-plugin-pwa"             // manifest + service worker
+"sharp"                       // generación de iconos (scripts/gen-icons.mjs)
 ```
 
-**ADR relacionado:** [ADR-005-state-management.md](adrs/ADR-005-state-management.md)
+## 6. Build y Deploy
 
----
-
-## 4. AI Integration: OpenAI APIs
-
-### Servicios Utilizados
-
-| Servicio | Uso |
-|----------|-----|
-| **GPT-4** | Chat del copiloto, parsing de texto a acciones |
-| **Whisper** | Transcripción de audio a texto |
-
-### Modelo de Integración
-
-- **User-provided API keys**: El usuario provee su propia clave
-- **Sin backend propio**: Llamadas directas desde el cliente
-- **Function calling**: Para estructurar respuestas en JSON
-- **Confirmación requerida**: El AI propone, el usuario aprueba
-
-### Privacidad
-
-- Sin AI la app funciona 100%
-- El usuario controla qué datos puede leer el copiloto
-- Historial configurable (solo resultados / completo / nada)
-
-**ADR relacionado:** [ADR-003-ai-integration.md](adrs/ADR-003-ai-integration.md)
-
----
-
-## 5. Autenticación y Seguridad
-
-### Modelo de Autenticación
-
-- **PIN de 4-6 dígitos**: Almacenado como hash con salt
-- **Biometría**: FaceID / TouchID / Fingerprint via `local_auth`
-- **Sin cuenta cloud**: No se requiere email ni servidor
-
-### Niveles de Privacidad
-
-| Nivel | Protección |
-|-------|------------|
-| **Normal** | Encriptación base de datos |
-| **Privada** | Oculta de previews y widgets |
-| **Ultra-privada** | Encriptación adicional + PIN por acceso |
-
-### Almacenamiento Seguro
-
-- **flutter_secure_storage**: Para API keys y secrets
-- **SQLCipher**: Para datos de la base de datos
-- **Argon2id**: Para derivación de claves (ultra-private)
-
-**ADR relacionado:** [ADR-004-authentication.md](adrs/ADR-004-authentication.md)
-
----
-
-## 6. Dependencias Principales
-
-```yaml
-# State Management
-flutter_riverpod: ^2.4.9
-
-# Database
-drift: ^2.14.1
-sqlcipher_flutter_libs: ^0.5.5
-
-# Authentication
-local_auth: ^2.1.8
-flutter_secure_storage: ^9.0.0
-
-# Networking
-dio: ^5.4.0
-
-# UI
-lucide_icons: ^0.257.0
-google_fonts: ^6.1.0
-flutter_animate: ^4.3.0
-
-# Audio
-record: ^5.0.4
-just_audio: ^0.9.36
-
-# Utilities
-uuid: ^4.2.2
-intl: ^0.19.0
-freezed_annotation: ^2.4.1
+```bash
+cd app
+npm install
+npm run dev      # desarrollo con HMR
+npm run build    # tsc + vite build → dist/ (estático)
+npm run preview  # servir el build localmente
+npm run icons    # regenerar iconos PWA
 ```
 
----
+`dist/` es un sitio estático: se puede publicar en GitHub Pages, Netlify, Vercel o cualquier hosting con HTTPS (requisito para service workers e instalación).
 
-## 7. CI/CD
+## 7. Roadmap Técnico
 
-### GitHub Actions
+- **MVP (hecho)**: onboarding, Hoy, registro, áreas, personas, metas, personaje (radar de balance), sugerencias por reglas, PWA offline, export/import JSON.
+- **V1**: copiloto AI opcional con API key propia (ADR-003), bloqueo con PIN/WebAuthn, notificaciones locales donde el navegador lo permita, búsqueda y calendario.
+- **V2**: sync multi-dispositivo cifrado, integraciones (calendario/salud), análisis profundo.
 
-| Workflow | Trigger | Acciones |
-|----------|---------|----------|
-| **ci.yml** | push, PR | Analyze, Test, Build Android/iOS |
-| **pr-checks.yml** | PR | Validación rápida, size check |
+## 8. Referencias
 
-### Flujo de Builds
-
-```
-PR → Analyze → Test → Build Debug
-     ↓
-main → Build Release → Artifacts
-```
-
----
-
-## 8. Design System en Código
-
-El design system de DESIGN_SYSTEM.md está implementado en:
-
-| Archivo | Contenido |
-|---------|-----------|
-| `app_colors.dart` | Paleta de colores (primarios, semánticos, áreas) |
-| `app_typography.dart` | Escala tipográfica, estilos de texto |
-| `app_spacing.dart` | Sistema de espaciado, EdgeInsets helpers |
-| `app_radius.dart` | Border radius para diferentes elementos |
-| `app_shadows.dart` | Definiciones de sombras/elevación |
-| `app_animations.dart` | Curvas, duraciones, transiciones |
-| `app_theme.dart` | ThemeData para Material (light/dark) |
-
----
-
-## 9. Roadmap Técnico
-
-### MVP
-- [x] Setup de proyecto Flutter
-- [x] Design system implementado
-- [x] ADRs documentados
-- [x] CI/CD configurado
-- [ ] Base de datos con Drift
-- [ ] Pantallas de onboarding (A1-A6)
-- [ ] Dashboard (B1-B3)
-- [ ] Copiloto AI básico (J1-J4)
-
-### V1
-- [ ] Todas las 38 pantallas
-- [ ] Motor de sugerencias
-- [ ] Insights y revisión semanal
-- [ ] Búsqueda y calendario
-
-### V2
-- [ ] Sincronización multi-dispositivo
-- [ ] Integraciones (calendario, salud)
-- [ ] Mejoras de AI (memoria, análisis profundo)
-
----
-
-## 10. Referencias
-
-- [Flutter Documentation](https://flutter.dev/docs)
-- [Dart Language Tour](https://dart.dev/guides/language/language-tour)
-- [Riverpod Documentation](https://riverpod.dev/)
-- [Drift Documentation](https://drift.simonbinder.eu/)
-- [OpenAI API Documentation](https://platform.openai.com/docs)
-
----
-
-*Documento generado como parte de FASE 3: Setup Técnico*
+- [ADR-006: Pivote a PWA](adrs/ADR-006-pwa-pivot.md)
+- [PRODUCT_SPEC.md §14: Capa RPG](../PRODUCT_SPEC.md)
+- [vite-plugin-pwa](https://vite-pwa-org.netlify.app/) · [Dexie](https://dexie.org/)

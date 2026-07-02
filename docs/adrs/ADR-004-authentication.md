@@ -1,6 +1,6 @@
 # ADR-004: Authentication and Security
 
-**Status:** Accepted  
+**Status:** Superseded by [ADR-006](ADR-006-pwa-pivot.md) (pivote a PWA, julio 2026)  
 **Date:** January 2026  
 **Decision Makers:** Development Team
 
