@@ -51,6 +51,12 @@ export interface RitmoLog {
   nota?: string
 }
 
+export interface Milestone {
+  id: string
+  titulo: string
+  hecho: boolean
+}
+
 export interface Meta {
   id: string
   titulo: string
@@ -59,6 +65,7 @@ export interface Meta {
   metrica: string
   progreso: number // 0-100
   proximoPaso: string
+  milestones: Milestone[]
   fechaLimite?: number
   areaIds: string[]
   estado: 'activa' | 'pausada' | 'completada' | 'abandonada'
@@ -108,8 +115,20 @@ export interface XpEvent {
   dia: string // 'YYYY-MM-DD'
   areaId: string // '' si no aplica a un área
   cantidad: number
-  fuente: 'entrada' | 'checkin' | 'ritmo' | 'interaccion' | 'meta' | 'sugerencia'
+  fuente: 'entrada' | 'checkin' | 'ritmo' | 'interaccion' | 'meta' | 'sugerencia' | 'logro'
   refId: string
+}
+
+/** Logro desbloqueado (insignia); id = clave del catálogo en logic/achievements.ts */
+export interface Logro {
+  id: string
+  fecha: number
+}
+
+export interface ConfigAI {
+  proveedor: 'anthropic' | 'openai'
+  apiKey: string
+  modelo: string
 }
 
 export interface Ajustes {
@@ -118,4 +137,8 @@ export interface Ajustes {
   onboardingCompleto: boolean
   tema: 'claro' | 'oscuro' | 'sistema'
   mostrarNiveles: boolean
+  notificaciones?: boolean
+  ultimoRespaldo?: number
+  ultimaNotificacion?: number
+  ai?: ConfigAI
 }

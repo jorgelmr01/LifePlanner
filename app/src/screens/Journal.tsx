@@ -1,9 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/db'
 import type { Entry } from '../db/types'
 import { claveDia, fechaCorta, horaCorta } from '../logic/dates'
-import { crearEntrada } from '../logic/actions'
+import { actualizarEntrada, borrarEntrada, crearEntrada } from '../logic/actions'
 import { ChipsSelector, EscalaEmoji, Hoja, Vacio } from '../components/ui'
 import { PROMPTS_JOURNAL } from '../db/seeds'
 
@@ -14,11 +14,15 @@ interface ItemTimeline {
   texto: string
   detalle?: string
   privada?: boolean
+  entry?: Entry
 }
 
 export function Journal() {
   const [formAbierto, setFormAbierto] = useState(false)
   const [filtroArea, setFiltroArea] = useState('')
+  const [busqueda, setBusqueda] = useState('')
+  const [buscando, setBuscando] = useState(false)
+  const [entrySel, setEntrySel] = useState<Entry | null>(null)
 
   const entradas = useLiveQuery(() => db.entries.orderBy('fecha').reverse().toArray()) ?? []
   const logs = useLiveQuery(() => db.ritmoLogs.orderBy('fecha').reverse().limit(200).toArray()) ?? []
@@ -30,11 +34,13 @@ export function Journal() {
 
   const ritmoPorId = new Map(ritmos.map((r) => [r.id, r]))
   const personaPorId = new Map(personas.map((p) => [p.id, p]))
+  const q = busqueda.trim().toLowerCase()
 
   const items = useMemo(() => {
     const lista: ItemTimeline[] = []
     for (const e of entradas) {
       if (filtroArea && !e.areaIds.includes(filtroArea)) continue
+      if (q && !e.contenido.toLowerCase().includes(q)) continue
       const icono = e.tipo === 'journal' ? '📝' : e.tipo === 'checkin_manana' ? '☀️' : '🌙'
       lista.push({
         id: `e${e.id}`,
@@ -46,11 +52,13 @@ export function Journal() {
             : `Check-in de ${e.tipo === 'checkin_manana' ? 'la mañana' : 'la noche'}`,
         detalle: e.tipo !== 'journal' ? e.contenido : undefined,
         privada: e.privacidad === 'privada',
+        entry: e,
       })
     }
     if (!filtroArea) {
       for (const l of logs) {
         const r = ritmoPorId.get(l.ritmoId)
+        if (q && !(r?.nombre.toLowerCase().includes(q) ?? false)) continue
         lista.push({
           id: `l${l.id}`,
           fecha: l.fecha,
@@ -60,6 +68,8 @@ export function Journal() {
       }
       for (const i of interacciones) {
         const p = personaPorId.get(i.personaId)
+        const textoBusq = `${p?.nombre ?? ''} ${i.nota}`.toLowerCase()
+        if (q && !textoBusq.includes(q)) continue
         lista.push({
           id: `i${i.id}`,
           fecha: i.fecha,
@@ -70,7 +80,7 @@ export function Journal() {
       }
     }
     return lista.sort((a, b) => b.fecha - a.fecha)
-  }, [entradas, logs, interacciones, filtroArea, ritmoPorId, personaPorId])
+  }, [entradas, logs, interacciones, filtroArea, q, ritmoPorId, personaPorId])
 
   // agrupar por día
   const grupos: { dia: string; etiqueta: string; items: ItemTimeline[] }[] = []
@@ -94,10 +104,32 @@ export function Journal() {
     <div className="pantalla">
       <div className="encabezado">
         <h1>Registro</h1>
-        <button className="btn btn-primario btn-mini" onClick={() => setFormAbierto(true)}>
-          + Entrada
-        </button>
+        <div className="fila">
+          <button
+            style={{ fontSize: 20 }}
+            aria-label="Buscar"
+            onClick={() => {
+              setBuscando(!buscando)
+              setBusqueda('')
+            }}
+          >
+            🔍
+          </button>
+          <button className="btn btn-primario btn-mini" onClick={() => setFormAbierto(true)}>
+            + Entrada
+          </button>
+        </div>
       </div>
+
+      {buscando && (
+        <input
+          style={{ marginBottom: 12 }}
+          value={busqueda}
+          onChange={(e) => setBusqueda(e.target.value)}
+          placeholder="Buscar en tu registro…"
+          autoFocus
+        />
+      )}
 
       {areas.length > 0 && (
         <div className="chips" style={{ marginBottom: 16 }}>
@@ -117,14 +149,22 @@ export function Journal() {
       )}
 
       {grupos.length === 0 && (
-        <Vacio icono="📖" texto="Tu historia empieza aquí. Escribe tu primera entrada." />
+        <Vacio
+          icono="📖"
+          texto={q ? `Nada encontrado para "${busqueda}".` : 'Tu historia empieza aquí. Escribe tu primera entrada.'}
+        />
       )}
 
       {grupos.map((g) => (
         <div key={g.dia} className="seccion">
           <div className="seccion-titulo">{g.etiqueta}</div>
           {g.items.map((it) => (
-            <div key={it.id} className="tarjeta fila" style={{ alignItems: 'flex-start' }}>
+            <div
+              key={it.id}
+              className={`tarjeta fila ${it.entry ? 'tocable' : ''}`}
+              style={{ alignItems: 'flex-start' }}
+              onClick={() => it.entry && setEntrySel(it.entry)}
+            >
               <span style={{ fontSize: 18 }}>{it.icono}</span>
               <div className="crece">
                 <div style={{ whiteSpace: 'pre-wrap' }}>
@@ -143,56 +183,142 @@ export function Journal() {
       ))}
 
       <EntradaHoja abierta={formAbierto} onCerrar={() => setFormAbierto(false)} />
+      {entrySel && (
+        <EntradaHoja abierta={true} existente={entrySel} onCerrar={() => setEntrySel(null)} />
+      )}
     </div>
   )
 }
 
-export function EntradaHoja({ abierta, onCerrar }: { abierta: boolean; onCerrar: () => void }) {
-  const [contenido, setContenido] = useState('')
-  const [mood, setMood] = useState<number>()
-  const [areaIds, setAreaIds] = useState<string[]>([])
-  const [personaIds, setPersonaIds] = useState<string[]>([])
-  const [privada, setPrivada] = useState(false)
+/* ---------- Dictado por voz (Web Speech API, donde exista) ---------- */
+interface Reconocedor {
+  start(): void
+  stop(): void
+  onresult: ((e: { results: ArrayLike<ArrayLike<{ transcript: string }>>; resultIndex: number }) => void) | null
+  onend: (() => void) | null
+  continuous: boolean
+  interimResults: boolean
+  lang: string
+}
+
+function crearReconocedor(): Reconocedor | null {
+  const w = window as unknown as {
+    SpeechRecognition?: new () => Reconocedor
+    webkitSpeechRecognition?: new () => Reconocedor
+  }
+  const Ctor = w.SpeechRecognition ?? w.webkitSpeechRecognition
+  if (!Ctor) return null
+  const r = new Ctor()
+  r.continuous = true
+  r.interimResults = false
+  r.lang = 'es-MX'
+  return r
+}
+
+export function EntradaHoja({
+  abierta,
+  onCerrar,
+  existente,
+}: {
+  abierta: boolean
+  onCerrar: () => void
+  existente?: Entry
+}) {
+  const [contenido, setContenido] = useState(existente?.contenido ?? '')
+  const [mood, setMood] = useState<number | undefined>(existente?.mood)
+  const [areaIds, setAreaIds] = useState<string[]>(existente?.areaIds ?? [])
+  const [personaIds, setPersonaIds] = useState<string[]>(existente?.personaIds ?? [])
+  const [privada, setPrivada] = useState(existente?.privacidad === 'privada')
+  const [grabando, setGrabando] = useState(false)
+  const recRef = useRef<Reconocedor | null>(null)
 
   const areas = useLiveQuery(() => db.areas.orderBy('orden').toArray()) ?? []
   const personas = useLiveQuery(() => db.personas.where('estado').equals('activa').toArray()) ?? []
+  const soportaVoz = useMemo(() => crearReconocedor() !== null, [])
+
+  useEffect(() => () => recRef.current?.stop(), [])
 
   const prompts = useMemo(() => {
     const deAreas = areas.filter((a) => areaIds.includes(a.id)).flatMap((a) => a.prompts)
     return (deAreas.length ? deAreas : PROMPTS_JOURNAL).slice(0, 3)
   }, [areas, areaIds])
 
+  function alternarVoz() {
+    if (grabando) {
+      recRef.current?.stop()
+      setGrabando(false)
+      return
+    }
+    const rec = crearReconocedor()
+    if (!rec) return
+    rec.onresult = (e) => {
+      let texto = ''
+      for (let i = e.resultIndex; i < e.results.length; i++) texto += e.results[i][0].transcript
+      if (texto) setContenido((c) => (c ? c + ' ' : '') + texto.trim())
+    }
+    rec.onend = () => setGrabando(false)
+    recRef.current = rec
+    rec.start()
+    setGrabando(true)
+  }
+
   async function guardar() {
     if (!contenido.trim()) return
-    const datos: Omit<Entry, 'id'> = {
-      fecha: Date.now(),
-      tipo: 'journal',
-      contenido: contenido.trim(),
-      mood,
-      areaIds,
-      personaIds,
-      tags: [],
-      privacidad: privada ? 'privada' : 'normal',
+    if (existente) {
+      await actualizarEntrada(existente.id, {
+        contenido: contenido.trim(),
+        mood,
+        areaIds,
+        personaIds,
+        privacidad: privada ? 'privada' : 'normal',
+      })
+    } else {
+      await crearEntrada({
+        fecha: Date.now(),
+        tipo: 'journal',
+        contenido: contenido.trim(),
+        mood,
+        areaIds,
+        personaIds,
+        tags: [],
+        privacidad: privada ? 'privada' : 'normal',
+      })
+      setContenido('')
+      setMood(undefined)
+      setAreaIds([])
+      setPersonaIds([])
+      setPrivada(false)
     }
-    await crearEntrada(datos)
-    setContenido('')
-    setMood(undefined)
-    setAreaIds([])
-    setPersonaIds([])
-    setPrivada(false)
+    recRef.current?.stop()
+    onCerrar()
+  }
+
+  async function eliminar() {
+    if (!existente) return
+    await borrarEntrada(existente)
     onCerrar()
   }
 
   return (
     <Hoja abierta={abierta} onCerrar={onCerrar}>
-      <h2>📝 Nueva entrada</h2>
+      <h2>{existente ? '📝 Editar entrada' : '📝 Nueva entrada'}</h2>
       <label>¿Qué quieres registrar?</label>
       <textarea
         value={contenido}
         onChange={(e) => setContenido(e.target.value)}
         placeholder={prompts.join('  ·  ')}
-        autoFocus
+        autoFocus={!existente}
       />
+      {soportaVoz && (
+        <button
+          type="button"
+          className={`btn btn-fantasma btn-mini ${grabando ? 'grabando' : ''}`}
+          style={{ marginTop: 8 }}
+          onClick={alternarVoz}
+        >
+          {grabando ? '⏹ Detener dictado' : '🎤 Dictar por voz'}
+        </button>
+      )}
       <label>¿Cómo te sientes? (opcional)</label>
       <EscalaEmoji valor={mood} onCambio={(v) => setMood(v === mood ? undefined : v)} />
       {areas.length > 0 && (
@@ -231,8 +357,13 @@ export function EntradaHoja({ abierta, onCerrar }: { abierta: boolean; onCerrar:
         disabled={!contenido.trim()}
         onClick={guardar}
       >
-        Guardar entrada
+        {existente ? 'Guardar cambios' : 'Guardar entrada'}
       </button>
+      {existente && (
+        <button className="btn btn-peligro btn-bloque" style={{ marginTop: 8 }} onClick={eliminar}>
+          Eliminar entrada
+        </button>
+      )}
     </Hoja>
   )
 }

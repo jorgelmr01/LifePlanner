@@ -5,6 +5,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/db'
 import { estadoPorArea, progresoNivel } from '../logic/xp'
 import { DIA_MS, claveDia, inicioDia } from '../logic/dates'
+import { LOGROS } from '../logic/achievements'
 import { Barra, BadgeAtencion } from '../components/ui'
 import { Radar } from '../components/Radar'
 import type { Nav } from '../App'
@@ -18,6 +19,8 @@ export function Character({ nav }: { nav: Nav }) {
     [visibles.map((a) => a.id).join()],
   )
   const xpEventos = useLiveQuery(() => db.xpEvents.toArray()) ?? []
+  const logros = useLiveQuery(() => db.logros.toArray()) ?? []
+  const ganados = new Set(logros.map((l) => l.id))
 
   const xpTotal = xpEventos.reduce((s, e) => s + e.cantidad, 0)
   const nivel = progresoNivel(xpTotal)
@@ -63,6 +66,16 @@ export function Character({ nav }: { nav: Nav }) {
         </div>
       </div>
 
+      {visibles.length < 3 && (
+        <div className="tarjeta">
+          <div className="seccion-titulo">Balance de vida</div>
+          <p className="subtitulo">
+            El radar de balance necesita al menos 3 áreas visibles. Crea o muestra más áreas en la
+            pestaña Áreas.
+          </p>
+        </div>
+      )}
+
       {visibles.length >= 3 && (
         <div className="tarjeta">
           <div className="seccion-titulo">Balance de vida (14 días)</div>
@@ -79,6 +92,14 @@ export function Character({ nav }: { nav: Nav }) {
         </div>
       )}
 
+      <div className="tarjeta tocable" onClick={() => nav.abrir({ t: 'revision' })}>
+        <div className="fila">
+          <span style={{ fontSize: 22 }}>📋</span>
+          <b className="crece">Revisión semanal</b>
+          <span className="link">Ver →</span>
+        </div>
+      </div>
+
       <div className="tarjeta">
         <div className="seccion-titulo">Últimos 7 días</div>
         <div className="heat" style={{ gridTemplateColumns: 'repeat(7, 1fr)' }}>
@@ -89,6 +110,34 @@ export function Character({ nav }: { nav: Nav }) {
         <div className="subtitulo" style={{ marginTop: 8 }}>
           {diasActivos.size} de 7 días con actividad. La consistencia flexible gana: no se trata de
           rachas perfectas.
+        </div>
+      </div>
+
+      <div className="tarjeta">
+        <div className="seccion-titulo">
+          Logros
+          <span>
+            {ganados.size}/{LOGROS.length}
+          </span>
+        </div>
+        <div className="chips">
+          {LOGROS.map((l) => (
+            <span
+              key={l.id}
+              className="chip"
+              title={l.descripcion}
+              style={
+                ganados.has(l.id)
+                  ? { background: 'var(--warning-light)', borderColor: 'var(--warning)', color: 'inherit', fontWeight: 600 }
+                  : { opacity: 0.45, filter: 'grayscale(1)' }
+              }
+            >
+              {l.icono} {l.nombre}
+            </span>
+          ))}
+        </div>
+        <div className="subtitulo" style={{ marginTop: 8 }}>
+          Cada logro da +25 XP. Solo suman: nunca se pierden.
         </div>
       </div>
 

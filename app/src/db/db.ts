@@ -9,6 +9,7 @@ import type {
   Interaccion,
   Sugerencia,
   XpEvent,
+  Logro,
   Ajustes,
 } from './types'
 
@@ -22,6 +23,7 @@ export const db = new Dexie('life-copilot') as Dexie & {
   interacciones: EntityTable<Interaccion, 'id'>
   sugerencias: EntityTable<Sugerencia, 'id'>
   xpEvents: EntityTable<XpEvent, 'id'>
+  logros: EntityTable<Logro, 'id'>
   ajustes: EntityTable<Ajustes, 'id'>
 }
 
@@ -38,6 +40,17 @@ db.version(1).stores({
   ajustes: 'id',
 })
 
+db.version(2)
+  .stores({ logros: 'id' })
+  .upgrade(async (tx) => {
+    await tx
+      .table('metas')
+      .toCollection()
+      .modify((m) => {
+        if (!Array.isArray(m.milestones)) m.milestones = []
+      })
+  })
+
 export const uid = () =>
   (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now())
 
@@ -46,6 +59,7 @@ export async function exportarJSON(): Promise<string> {
   const dump = {
     version: 1,
     exportado: new Date().toISOString(),
+    logros: await db.logros.toArray(),
     areas: await db.areas.toArray(),
     entries: await db.entries.toArray(),
     ritmos: await db.ritmos.toArray(),
@@ -73,6 +87,7 @@ export async function importarJSON(json: string): Promise<void> {
       'interacciones',
       'sugerencias',
       'xpEvents',
+      'logros',
       'ajustes',
     ] as const) {
       if (Array.isArray(dump[tabla])) {

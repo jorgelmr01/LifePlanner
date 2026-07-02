@@ -3,7 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { db, uid } from '../db/db'
 import type { Interaccion, Persona } from '../db/types'
 import { diasDesde, fechaCorta, haceTexto } from '../logic/dates'
-import { registrarInteraccion } from '../logic/actions'
+import { archivarPersona, registrarInteraccion } from '../logic/actions'
 import { EscalaEmoji, Hoja, Vacio } from '../components/ui'
 import type { Nav } from '../App'
 
@@ -273,7 +273,7 @@ export function PersonDetail({ nav, id }: { nav: Nav; id: string }) {
         <button
           className="btn btn-peligro btn-mini"
           onClick={async () => {
-            await db.personas.update(id, { estado: 'archivada' })
+            await archivarPersona(persona)
             nav.volver()
           }}
         >

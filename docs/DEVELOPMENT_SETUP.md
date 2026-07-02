@@ -30,7 +30,10 @@ Abre `http://localhost:5173`. Para simular móvil usa las DevTools (modo respons
 | `npm run dev` | Servidor de desarrollo con HMR |
 | `npm run build` | Type-check (`tsc -b`) + build de producción en `dist/` |
 | `npm run preview` | Sirve `dist/` en `http://localhost:4173` (necesario para probar el service worker) |
+| `npm test` | Tests unitarios (Vitest + fake-indexeddb): XP, sugerencias, logros, fechas |
 | `npm run icons` | Regenera los iconos PWA desde el SVG en `scripts/gen-icons.mjs` |
+
+**Deploy**: al hacer merge a `main`, `.github/workflows/deploy.yml` corre los tests, compila con `BASE_PATH=/<repo>/` y publica `dist/` en GitHub Pages (habilita Pages → Source: GitHub Actions en la configuración del repo la primera vez).
 
 ## Probar como app instalada
 

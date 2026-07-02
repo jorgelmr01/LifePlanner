@@ -5,15 +5,21 @@ import type { Ritmo } from '../db/types'
 import { claveDia, DIA_MS, diasDesde, fechaLarga, inicioDia } from '../logic/dates'
 import { generarSugerencias, esperadasPorSemana } from '../logic/suggestions'
 import { progresoNivel } from '../logic/xp'
+import { evaluarLogros } from '../logic/achievements'
+import { notificarSugerencias, pedirPersistencia } from '../logic/notify'
 import { marcarRitmoHoy, desmarcarRitmoHoy, crearEntrada } from '../logic/actions'
 import { Barra, EscalaEmoji, Hoja } from '../components/ui'
 import type { Nav } from '../App'
 
 export function Today({ nav }: { nav: Nav }) {
-  const [checkinAbierto, setCheckinAbierto] = useState(false)
+  const [checkinAbierto, setCheckinAbierto] = useState<'manana' | 'noche' | null>(null)
 
   useEffect(() => {
+    pedirPersistencia()
     generarSugerencias()
+      .then(() => notificarSugerencias())
+      .then(() => evaluarLogros())
+      .catch(() => {})
   }, [])
 
   const ajustes = useLiveQuery(() => db.ajustes.get('main'))
@@ -26,13 +32,9 @@ export function Today({ nav }: { nav: Nav }) {
   const personas = useLiveQuery(() => db.personas.where('estado').equals('activa').toArray()) ?? []
   const interacciones = useLiveQuery(() => db.interacciones.toArray()) ?? []
   const xpEventos = useLiveQuery(() => db.xpEvents.toArray()) ?? []
-  const checkinsHoy =
+  const entradasRecientes =
     useLiveQuery(() =>
-      db.entries
-        .where('fecha')
-        .aboveOrEqual(inicioDia())
-        .and((e) => e.tipo !== 'journal')
-        .toArray(),
+      db.entries.where('fecha').aboveOrEqual(inicioDia() - 6 * DIA_MS).toArray(),
     ) ?? []
 
   const xpTotal = xpEventos.reduce((s, e) => s + e.cantidad, 0)
@@ -40,13 +42,29 @@ export function Today({ nav }: { nav: Nav }) {
 
   const hechoHoy = new Set(logsHoy.map((l) => l.ritmoId))
   const hoy = new Date().getDay()
+  const hora = new Date().getHours()
   const ritmosHoy = ritmos.filter(
     (r) => r.frecuencia === 'diario' || (r.frecuencia === 'personalizado' && r.diasSemana.includes(hoy)),
   )
   const ritmosSemana = ritmos.filter((r) => r.frecuencia === 'semanal')
 
-  const esNoche = new Date().getHours() >= 18
-  const checkinHecho = checkinsHoy.some((e) => e.tipo === (esNoche ? 'checkin_noche' : 'checkin_manana'))
+  const checkinsHoy = entradasRecientes.filter((e) => e.fecha >= inicioDia() && e.tipo !== 'journal')
+  const mananaHecha = checkinsHoy.some((e) => e.tipo === 'checkin_manana')
+  const nocheHecha = checkinsHoy.some((e) => e.tipo === 'checkin_noche')
+
+  // primer día: sin ningún XP registrado aún
+  const primerDia = xpEventos.length === 0
+
+  // recordatorio de respaldo: >21 días desde el último export (o desde el primer evento)
+  const primerEvento = xpEventos.length ? Math.min(...xpEventos.map((e) => e.fecha)) : Date.now()
+  const refRespaldo = ajustes?.ultimoRespaldo ?? primerEvento
+  const pedirRespaldo = xpEventos.length > 0 && diasDesde(refRespaldo) > 21
+
+  // revisión semanal: domingos, si no hay reflexión reciente
+  const revisionHecha = entradasRecientes.some(
+    (e) => e.tags.includes('revisión') && e.fecha >= inicioDia() - 2 * DIA_MS,
+  )
+  const esDomingo = hoy === 0
 
   // personas con contacto vencido
   const ultimaPorPersona = new Map<string, number>()
@@ -63,7 +81,7 @@ export function Today({ nav }: { nav: Nav }) {
     .sort((a, b) => (b.dias ?? 0) - (a.dias ?? 0))
     .slice(0, 2)
 
-  const saludo = new Date().getHours() < 12 ? 'Buenos días' : esNoche ? 'Buenas noches' : 'Buenas tardes'
+  const saludo = hora < 12 ? 'Buenos días' : hora >= 19 ? 'Buenas noches' : 'Buenas tardes'
 
   function cuentaSemana(r: Ritmo) {
     return logsSemana.filter((l) => l.ritmoId === r.id).length
@@ -79,10 +97,25 @@ export function Today({ nav }: { nav: Nav }) {
           </h1>
           <div className="subtitulo">{fechaLarga()}</div>
         </div>
-        <button style={{ fontSize: 22 }} onClick={() => nav.abrir({ t: 'ajustes' })} aria-label="Ajustes">
-          ⚙️
-        </button>
+        <div className="fila" style={{ gap: 14 }}>
+          <button style={{ fontSize: 22 }} onClick={() => nav.abrir({ t: 'copiloto' })} aria-label="Copiloto AI">
+            🤖
+          </button>
+          <button style={{ fontSize: 22 }} onClick={() => nav.abrir({ t: 'ajustes' })} aria-label="Ajustes">
+            ⚙️
+          </button>
+        </div>
       </div>
+
+      {primerDia && (
+        <div className="tarjeta" style={{ background: 'var(--primary-surface)', borderColor: 'var(--primary-light)' }}>
+          <b>🗺️ Tu primer día de aventura</b>
+          <p className="subtitulo" style={{ margin: '6px 0 0' }}>
+            Tres formas de ganar tu primer XP: marca un ritmo aquí abajo, haz tu check-in, o escribe
+            tu primera entrada en Registro. Cada acción sube el nivel de tus áreas.
+          </p>
+        </div>
+      )}
 
       {(ajustes?.mostrarNiveles ?? true) && (
         <div className="tarjeta tocable" onClick={() => nav.tab('personaje')}>
@@ -115,15 +148,58 @@ export function Today({ nav }: { nav: Nav }) {
         </div>
       )}
 
-      {!checkinHecho && (
+      {esDomingo && !revisionHecha && !primerDia && (
+        <div className="tarjeta tocable" onClick={() => nav.abrir({ t: 'revision' })}>
+          <div className="fila">
+            <span style={{ fontSize: 24 }}>📋</span>
+            <div className="crece">
+              <b>Es domingo: revisión semanal</b>
+              <div className="subtitulo">Tu semana vs la anterior, en 2 minutos</div>
+            </div>
+            <span style={{ color: 'var(--gray-400)' }}>›</span>
+          </div>
+        </div>
+      )}
+
+      {pedirRespaldo && (
+        <div className="tarjeta tocable" onClick={() => nav.abrir({ t: 'ajustes' })}>
+          <div className="fila">
+            <span style={{ fontSize: 24 }}>💾</span>
+            <div className="crece">
+              <b>Exporta tu respaldo</b>
+              <div className="subtitulo">
+                Tus datos viven solo en este dispositivo. Un respaldo JSON toma 5 segundos.
+              </div>
+            </div>
+            <span style={{ color: 'var(--gray-400)' }}>›</span>
+          </div>
+        </div>
+      )}
+
+      {!mananaHecha && (
         <div className="tarjeta">
           <div className="fila">
-            <span style={{ fontSize: 24 }}>{esNoche ? '🌙' : '☀️'}</span>
+            <span style={{ fontSize: 24 }}>☀️</span>
             <div className="crece">
-              <b>Check-in de {esNoche ? 'la noche' : 'la mañana'}</b>
-              <div className="subtitulo">30 segundos: ánimo, energía y una intención</div>
+              <b>Check-in de la mañana</b>
+              <div className="subtitulo">Ánimo, energía y una intención</div>
             </div>
-            <button className="btn btn-secundario btn-mini" onClick={() => setCheckinAbierto(true)}>
+            <button className="btn btn-secundario btn-mini" onClick={() => setCheckinAbierto('manana')}>
+              Hacer
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!nocheHecha && hora >= 17 && (
+        <div className="tarjeta">
+          <div className="fila">
+            <span style={{ fontSize: 24 }}>🌙</span>
+            <div className="crece">
+              <b>Check-in de la noche</b>
+              <div className="subtitulo">¿Qué salió bien hoy? ¿Qué agradeces?</div>
+            </div>
+            <button className="btn btn-secundario btn-mini" onClick={() => setCheckinAbierto('noche')}>
               Hacer
             </button>
           </div>
@@ -160,6 +236,16 @@ export function Today({ nav }: { nav: Nav }) {
             >
               {r.nombre}
             </span>
+            <button
+              aria-label={`Detalle de ${r.nombre}`}
+              style={{ color: 'var(--gray-400)', padding: '4px 8px' }}
+              onClick={(e) => {
+                e.stopPropagation()
+                nav.abrir({ t: 'ritmo', id: r.id })
+              }}
+            >
+              ›
+            </button>
           </div>
         ))}
       </div>
@@ -174,7 +260,11 @@ export function Today({ nav }: { nav: Nav }) {
             return (
               <div key={r.id} className="tarjeta fila">
                 <span style={{ fontSize: 20 }}>{r.icono}</span>
-                <div className="crece">
+                <div
+                  className="crece"
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => nav.abrir({ t: 'ritmo', id: r.id })}
+                >
                   <div style={{ fontWeight: 600 }}>{r.nombre}</div>
                   <div style={{ marginTop: 6 }}>
                     <Barra fraccion={hechas / esperadas} color="var(--secondary)" />
@@ -213,7 +303,11 @@ export function Today({ nav }: { nav: Nav }) {
         </div>
       )}
 
-      <CheckinHoja abierta={checkinAbierto} noche={esNoche} onCerrar={() => setCheckinAbierto(false)} />
+      <CheckinHoja
+        abierta={checkinAbierto !== null}
+        noche={checkinAbierto === 'noche'}
+        onCerrar={() => setCheckinAbierto(null)}
+      />
     </div>
   )
 }
@@ -273,9 +367,9 @@ function CheckinHoja({
             className={energia === n ? 'activo' : ''}
             style={{ fontSize: 16, fontWeight: 700 }}
             onClick={() => setEnergia(n)}
+            aria-label={`Energía ${n} de 5`}
           >
-            {'⚡'.repeat(1)}
-            {n}
+            ⚡{n}
           </button>
         ))}
       </div>

@@ -138,8 +138,18 @@ Botón **+** flotante: captura rápida (entrada, marcar ritmo, interacción, met
   - [x] Motor de sugerencias por reglas (5 reglas)
   - [x] PWA: manifest, service worker, offline, iconos
   - [x] Export/import JSON, modo oscuro
-- [ ] **V1** — Copiloto AI opcional (API key propia), PIN/WebAuthn, búsqueda, calendario, insights
-- [ ] **V2** — Sync multi-dispositivo cifrado, integraciones, automatizaciones
+- [x] **V1 (iteración 2)** — julio 2026
+  - [x] 🤖 Copiloto AI opcional con API key propia (Anthropic/OpenAI, chat con streaming y contexto de tus datos, carga diferida)
+  - [x] 🏅 Logros (16 insignias que solo suman) y celebración de level-up
+  - [x] 🪜 Milestones en metas (checklist con XP, avanzan el progreso)
+  - [x] ✏️ Editar/borrar entradas, editar/pausar/archivar ritmos, editar/ocultar áreas — con Deshacer
+  - [x] 🔍 Búsqueda en el timeline · 📋 Revisión semanal (semana vs anterior + reflexión)
+  - [x] 🎤 Dictado por voz (Web Speech API donde exista)
+  - [x] 🔔 Notificaciones locales + badge del icono · 💾 recordatorio de respaldo · `storage.persist()`
+  - [x] ⬅️ Botón/gesto atrás nativo para vistas y hojas · check-ins mañana y noche · primer día guiado
+  - [x] ✅ 24 tests unitarios (Vitest) de XP, sugerencias, logros y fechas
+  - [x] 🚀 Workflow de deploy a GitHub Pages (al hacer merge a `main`)
+- [ ] **V2** — PIN/WebAuthn, calendario, sync multi-dispositivo cifrado, integraciones, automatizaciones
 
 > El prototipo Flutter original (`life_copilot/`) fue retirado en el pivote; vive en el historial de git (tag `V0.0.0`).
 

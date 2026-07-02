@@ -299,8 +299,8 @@ label {
 
 /* Check de ritmo */
 .check {
-  width: 26px;
-  height: 26px;
+  width: 30px;
+  height: 30px;
   border-radius: 8px;
   border: 2px solid var(--gray-300);
   display: inline-flex;
@@ -539,6 +539,81 @@ label {
     transform: translate(-50%, -8px);
   }
 }
+.toast.toast-accion {
+  pointer-events: auto;
+  animation-duration: 5s;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.toast.toast-accion button {
+  color: #a5b4fc;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+/* Level-up */
+.levelup {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(17, 24, 39, 0.35);
+  animation: velo 0.2s ease;
+  pointer-events: none;
+}
+.levelup-tarjeta {
+  background: var(--card);
+  border-radius: 24px;
+  padding: 28px 36px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 20px 50px rgba(17, 24, 39, 0.3);
+  animation: levelup-pop 0.4s cubic-bezier(0.2, 1.6, 0.4, 1);
+  position: relative;
+  font-size: 18px;
+}
+@keyframes levelup-pop {
+  from {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+}
+.levelup-estrellas {
+  position: absolute;
+  inset: -18px;
+  pointer-events: none;
+}
+.levelup-estrellas span {
+  position: absolute;
+  color: var(--warning);
+  font-size: 20px;
+  animation: estrella 1.8s ease-out forwards;
+  opacity: 0;
+}
+.levelup-estrellas span:nth-child(1) { left: 4%; top: 12%; }
+.levelup-estrellas span:nth-child(2) { right: 6%; top: 6%; }
+.levelup-estrellas span:nth-child(3) { left: 12%; bottom: 8%; }
+.levelup-estrellas span:nth-child(4) { right: 10%; bottom: 14%; }
+.levelup-estrellas span:nth-child(5) { left: 48%; top: -8%; }
+.levelup-estrellas span:nth-child(6) { right: 44%; bottom: -10%; }
+@keyframes estrella {
+  0% {
+    opacity: 0;
+    transform: scale(0.3) rotate(0deg);
+  }
+  25% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.5) rotate(50deg) translateY(-14px);
+  }
+}
 
 /* Heatmap de historial */
 .heat {
@@ -576,4 +651,57 @@ label {
 
 .lista-opciones .tarjeta {
   margin-bottom: 10px;
+}
+
+/* Chat del copiloto */
+.burbuja {
+  max-width: 85%;
+  padding: 10px 14px;
+  border-radius: 16px;
+  margin-bottom: 10px;
+  white-space: pre-wrap;
+  font-size: 15px;
+  line-height: 1.45;
+}
+.burbuja.usuario {
+  background: var(--primary);
+  color: #fff;
+  margin-left: auto;
+  border-bottom-right-radius: 4px;
+}
+.burbuja.copiloto {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-bottom-left-radius: 4px;
+}
+
+/* Barras comparativas (revisión semanal) */
+.comparativa {
+  display: grid;
+  grid-template-columns: 90px 1fr;
+  gap: 6px 10px;
+  align-items: center;
+  font-size: 13px;
+}
+.comparativa .barras {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.comparativa .barras > div {
+  height: 9px;
+  border-radius: 999px;
+  min-width: 3px;
+}
+
+/* Micrófono activo */
+.grabando {
+  animation: pulso 1.2s ease infinite;
+  background: var(--error-light) !important;
+  color: var(--error) !important;
+}
+@keyframes pulso {
+  50% {
+    opacity: 0.55;
+  }
 }

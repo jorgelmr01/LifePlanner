@@ -81,8 +81,8 @@ npm run icons    # regenerar iconos PWA
 ## 7. Roadmap Técnico
 
 - **MVP (hecho)**: onboarding, Hoy, registro, áreas, personas, metas, personaje (radar de balance), sugerencias por reglas, PWA offline, export/import JSON.
-- **V1**: copiloto AI opcional con API key propia (ADR-003), bloqueo con PIN/WebAuthn, notificaciones locales donde el navegador lo permita, búsqueda y calendario.
-- **V2**: sync multi-dispositivo cifrado, integraciones (calendario/salud), análisis profundo.
+- **V1 (hecho, iteración 2)**: copiloto AI opcional con API key propia (`@anthropic-ai/sdk` en modo navegador con carga diferida, o OpenAI vía fetch), logros y level-up, milestones, edición/borrado con Deshacer, búsqueda, revisión semanal, dictado por voz, notificaciones locales + Badging API, `navigator.storage.persist()`, historial/botón atrás nativo, tests con Vitest + fake-indexeddb, deploy a GitHub Pages (`.github/workflows/deploy.yml`, `BASE_PATH`).
+- **V2**: bloqueo con PIN/WebAuthn, calendario, sync multi-dispositivo cifrado, integraciones (calendario/salud), análisis profundo.
 
 ## 8. Referencias
 

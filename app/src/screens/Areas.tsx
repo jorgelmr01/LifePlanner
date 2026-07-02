@@ -15,7 +15,9 @@ export function Areas({ nav }: { nav: Nav }) {
     () => estadoPorArea(areas.map((a) => a.id)),
     [areas.map((a) => a.id).join()],
   )
-  const ritmos = useLiveQuery(() => db.ritmos.where('estado').equals('activo').toArray()) ?? []
+  const todosRitmos = useLiveQuery(() => db.ritmos.toArray()) ?? []
+  const ritmos = todosRitmos.filter((r) => r.estado === 'activo')
+  const pausados = todosRitmos.filter((r) => r.estado === 'pausado')
   const metas = useLiveQuery(() => db.metas.where('estado').equals('activa').toArray()) ?? []
 
   return (
@@ -55,6 +57,63 @@ export function Areas({ nav }: { nav: Nav }) {
           </div>
         )
       })}
+
+      {areas.some((a) => !a.visible) && (
+        <div className="seccion">
+          <div className="seccion-titulo">Ocultas</div>
+          {areas
+            .filter((a) => !a.visible)
+            .map((a) => (
+              <div
+                key={a.id}
+                className="tarjeta tocable fila"
+                style={{ opacity: 0.6 }}
+                onClick={() => nav.abrir({ t: 'area', id: a.id })}
+              >
+                <span style={{ fontSize: 20 }}>{a.icono}</span>
+                <span className="crece">{a.nombre}</span>
+                <span className="subtitulo">🙈</span>
+              </div>
+            ))}
+        </div>
+      )}
+
+      <div className="seccion" style={{ marginTop: 24 }}>
+        <div className="seccion-titulo">Tus ritmos</div>
+        {ritmos.map((r) => (
+          <div key={r.id} className="tarjeta tocable fila" onClick={() => nav.abrir({ t: 'ritmo', id: r.id })}>
+            <span style={{ fontSize: 20 }}>{r.icono}</span>
+            <span className="crece" style={{ fontWeight: 600 }}>
+              {r.nombre}
+            </span>
+            <span className="subtitulo">
+              {r.frecuencia === 'diario' ? 'Diario' : `${r.vecesPorSemana}x/sem`}
+            </span>
+            <span style={{ color: 'var(--gray-400)' }}>›</span>
+          </div>
+        ))}
+        {pausados.length > 0 && (
+          <>
+            <div className="seccion-titulo" style={{ marginTop: 12 }}>
+              Pausados
+            </div>
+            {pausados.map((r) => (
+              <div
+                key={r.id}
+                className="tarjeta tocable fila"
+                style={{ opacity: 0.65 }}
+                onClick={() => nav.abrir({ t: 'ritmo', id: r.id })}
+              >
+                <span style={{ fontSize: 20 }}>{r.icono}</span>
+                <span className="crece" style={{ fontWeight: 600 }}>
+                  {r.nombre}
+                </span>
+                <span className="subtitulo">⏸</span>
+              </div>
+            ))}
+          </>
+        )}
+      </div>
 
       <CrearAreaHoja abierta={crearAbierto} onCerrar={() => setCrearAbierto(false)} orden={areas.length} />
     </div>
@@ -134,6 +193,7 @@ function CrearAreaHoja({
 }
 
 export function AreaDetail({ nav, id }: { nav: Nav; id: string }) {
+  const [editando, setEditando] = useState(false)
   const area = useLiveQuery(() => db.areas.get(id), [id])
   const estados = useLiveQuery(() => estadoPorArea([id]), [id])
   const ritmos = useLiveQuery(() => db.ritmos.where('estado').equals('activo').toArray()) ?? []
@@ -155,7 +215,9 @@ export function AreaDetail({ nav, id }: { nav: Nav; id: string }) {
         <h1 style={{ fontSize: 22 }}>
           {area.icono} {area.nombre}
         </h1>
-        <span style={{ width: 48 }} />
+        <button className="link" onClick={() => setEditando(true)}>
+          Editar
+        </button>
       </div>
 
       {e && (
@@ -217,6 +279,87 @@ export function AreaDetail({ nav, id }: { nav: Nav; id: string }) {
           </div>
         ))}
       </div>
+
+      <EditarAreaHoja abierta={editando} onCerrar={() => setEditando(false)} areaId={id} volver={nav.volver} />
     </div>
+  )
+}
+
+function EditarAreaHoja({
+  abierta,
+  onCerrar,
+  areaId,
+  volver,
+}: {
+  abierta: boolean
+  onCerrar: () => void
+  areaId: string
+  volver: () => void
+}) {
+  const area = useLiveQuery(() => db.areas.get(areaId), [areaId])
+  const [nombre, setNombre] = useState<string>()
+  const [icono, setIcono] = useState<string>()
+  const [color, setColor] = useState<string>()
+  const ICONOS = ['💪', '💼', '👥', '💰', '🙏', '📚', '🎨', '🤝', '❤️', '🌱', '🏠', '✈️', '🎮', '🎵']
+
+  if (!area) return null
+  const vNombre = nombre ?? area.nombre
+  const vIcono = icono ?? area.icono
+  const vColor = color ?? area.color
+
+  return (
+    <Hoja abierta={abierta} onCerrar={onCerrar}>
+      <h2>Editar área</h2>
+      <label>Nombre</label>
+      <input value={vNombre} onChange={(e) => setNombre(e.target.value)} />
+      <label>Icono</label>
+      <div className="chips">
+        {ICONOS.map((i) => (
+          <button key={i} className={`chip ${vIcono === i ? 'activo' : ''}`} onClick={() => setIcono(i)}>
+            {i}
+          </button>
+        ))}
+      </div>
+      <label>Color</label>
+      <div className="chips">
+        {AREAS_CATALOGO.map((c) => (
+          <button
+            key={c.color}
+            className="chip"
+            style={{
+              background: c.color,
+              width: 34,
+              height: 34,
+              borderRadius: 999,
+              border: vColor === c.color ? '3px solid var(--gray-900)' : 'none',
+            }}
+            onClick={() => setColor(c.color)}
+            aria-label={c.color}
+          />
+        ))}
+      </div>
+      <button
+        className="btn btn-primario btn-bloque"
+        style={{ marginTop: 20 }}
+        disabled={!vNombre.trim()}
+        onClick={async () => {
+          await db.areas.update(areaId, { nombre: vNombre.trim(), icono: vIcono, color: vColor })
+          onCerrar()
+        }}
+      >
+        Guardar
+      </button>
+      <button
+        className="btn btn-fantasma btn-bloque"
+        style={{ marginTop: 8 }}
+        onClick={async () => {
+          await db.areas.update(areaId, { visible: !area.visible })
+          onCerrar()
+          if (area.visible) volver()
+        }}
+      >
+        {area.visible ? '🙈 Ocultar área (no se borra nada)' : '👁 Volver a mostrar área'}
+      </button>
+    </Hoja>
   )
 }

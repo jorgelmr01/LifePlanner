@@ -1,7 +1,13 @@
 import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/db'
-import { avanzarMeta, crearMeta } from '../logic/actions'
+import {
+  agregarMilestone,
+  alternarMilestone,
+  avanzarMeta,
+  borrarMilestone,
+  crearMeta,
+} from '../logic/actions'
 import { Barra, ChipsSelector, Hoja, Vacio } from '../components/ui'
 import { haceTexto } from '../logic/dates'
 import type { Nav } from '../App'
@@ -84,6 +90,7 @@ export function MetaHoja({ abierta, onCerrar }: { abierta: boolean; onCerrar: ()
       metrica: '',
       progreso: 0,
       proximoPaso: proximoPaso.trim(),
+      milestones: [],
       areaIds,
       estado: 'activa',
     })
@@ -133,6 +140,7 @@ export function MetaHoja({ abierta, onCerrar }: { abierta: boolean; onCerrar: ()
 export function GoalDetail({ nav, id }: { nav: Nav; id: string }) {
   const meta = useLiveQuery(() => db.metas.get(id), [id])
   const [paso, setPaso] = useState<string | null>(null)
+  const [nuevoMilestone, setNuevoMilestone] = useState('')
 
   if (!meta) return null
 
@@ -185,6 +193,63 @@ export function GoalDetail({ nav, id }: { nav: Nav; id: string }) {
           <p>{meta.porque}</p>
         </div>
       )}
+
+      <div className="tarjeta">
+        <div className="seccion-titulo">Milestones</div>
+        {(meta.milestones ?? []).length === 0 && (
+          <p className="subtitulo" style={{ marginBottom: 8 }}>
+            Divide la quest en pasos: cada milestone completado da +25 XP y avanza el progreso.
+          </p>
+        )}
+        {(meta.milestones ?? []).map((m) => (
+          <div key={m.id} className="fila" style={{ padding: '6px 0' }}>
+            <button
+              className={`check ${m.hecho ? 'hecho' : ''}`}
+              aria-label={m.hecho ? 'Desmarcar milestone' : 'Completar milestone'}
+              onClick={() => alternarMilestone(meta, m.id)}
+            >
+              {m.hecho ? '✓' : ''}
+            </button>
+            <span
+              className="crece"
+              style={{ textDecoration: m.hecho ? 'line-through' : 'none', opacity: m.hecho ? 0.6 : 1 }}
+            >
+              {m.titulo}
+            </span>
+            <button
+              aria-label="Borrar milestone"
+              style={{ color: 'var(--gray-400)' }}
+              onClick={() => borrarMilestone(meta, m.id)}
+            >
+              ✕
+            </button>
+          </div>
+        ))}
+        <div className="fila" style={{ marginTop: 8 }}>
+          <input
+            className="crece"
+            value={nuevoMilestone}
+            onChange={(e) => setNuevoMilestone(e.target.value)}
+            placeholder="Nuevo milestone…"
+            onKeyDown={async (e) => {
+              if (e.key === 'Enter' && nuevoMilestone.trim()) {
+                await agregarMilestone(meta, nuevoMilestone)
+                setNuevoMilestone('')
+              }
+            }}
+          />
+          <button
+            className="btn btn-secundario btn-mini"
+            disabled={!nuevoMilestone.trim()}
+            onClick={async () => {
+              await agregarMilestone(meta, nuevoMilestone)
+              setNuevoMilestone('')
+            }}
+          >
+            +
+          </button>
+        </div>
+      </div>
 
       <div className="tarjeta">
         <div className="seccion-titulo">Próximo paso</div>

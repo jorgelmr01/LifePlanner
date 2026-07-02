@@ -13,16 +13,21 @@ export const XP_VALORES = {
   interaccion: 15,
   meta: 25,
   sugerencia: 10,
+  logro: 25,
 } as const
 
 export type FuenteXp = keyof typeof XP_VALORES
 
-/** Registra XP para cero o más áreas (dividido en partes iguales, mínimo el valor completo si no hay área) */
+/**
+ * Registra XP para cero o más áreas (dividido en partes iguales).
+ * Si el personaje sube de nivel, emite el evento window 'levelup' con el nivel nuevo.
+ */
 export async function otorgarXp(fuente: FuenteXp, refId: string, areaIds: string[]): Promise<number> {
   const total = XP_VALORES[fuente]
   const ahora = Date.now()
   const targets = areaIds.length ? areaIds : ['']
   const porArea = Math.max(1, Math.round(total / targets.length))
+  const antes = await xpTotalPersonaje()
   const eventos: XpEvent[] = targets.map((areaId) => ({
     id: uid(),
     fecha: ahora,
@@ -33,7 +38,19 @@ export async function otorgarXp(fuente: FuenteXp, refId: string, areaIds: string
     refId,
   }))
   await db.xpEvents.bulkAdd(eventos)
+  const despues = antes + porArea * targets.length
+  if (nivelDeXp(despues) > nivelDeXp(antes) && typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('levelup', { detail: { nivel: nivelDeXp(despues) } }))
+  }
   return total
+}
+
+/** Elimina el XP generado por un objeto (al borrar una entrada, desmarcar un ritmo, etc.) */
+export async function retirarXpDe(refId: string): Promise<void> {
+  const eventos = await db.xpEvents.toArray()
+  for (const ev of eventos) {
+    if (ev.refId === refId) await db.xpEvents.delete(ev.id)
+  }
 }
 
 /** Nivel a partir de XP acumulado: cada nivel cuesta 50·n² XP acumulado */

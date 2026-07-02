@@ -1,6 +1,10 @@
 import { useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { borrarTodo, db, exportarJSON, importarJSON } from '../db/db'
+import type { ConfigAI } from '../db/types'
+import { haceTexto } from '../logic/dates'
+import { MODELO_DEFAULT } from '../logic/copilot'
+import { pedirPermisoNotificaciones, soportaNotificaciones } from '../logic/notify'
 import { toast } from '../components/ui'
 import type { Nav } from '../App'
 
@@ -20,6 +24,22 @@ export function Settings({ nav }: { nav: Nav }) {
     a.download = `life-copilot-respaldo-${new Date().toISOString().slice(0, 10)}.json`
     a.click()
     URL.revokeObjectURL(url)
+    await db.ajustes.update('main', { ultimoRespaldo: Date.now() })
+  }
+
+  async function alternarNotificaciones() {
+    if (!ajustes) return
+    if (ajustes.notificaciones) {
+      await db.ajustes.update('main', { notificaciones: false })
+      return
+    }
+    const ok = await pedirPermisoNotificaciones()
+    if (ok) {
+      await db.ajustes.update('main', { notificaciones: true })
+      toast('Notificaciones activadas 🔔')
+    } else {
+      toast('El navegador no dio permiso')
+    }
   }
 
   async function importar(archivo: File) {
@@ -66,12 +86,33 @@ export function Settings({ nav }: { nav: Nav }) {
         >
           {ajustes.mostrarNiveles ? '✓ Niveles y XP visibles' : 'Niveles y XP ocultos'}
         </button>
+        {soportaNotificaciones() && (
+          <>
+            <label>Notificaciones</label>
+            <button
+              className={`chip ${ajustes.notificaciones ? 'activo' : ''}`}
+              onClick={alternarNotificaciones}
+            >
+              {ajustes.notificaciones ? '🔔 Activadas (al abrir la app)' : '🔕 Desactivadas'}
+            </button>
+            <p className="subtitulo" style={{ marginTop: 6 }}>
+              Te avisamos de sugerencias pendientes (máx. 1 al día). En iPhone requiere tener la app
+              instalada en la pantalla de inicio.
+            </p>
+          </>
+        )}
       </div>
+
+      <ConfigAICard />
+
 
       <div className="tarjeta">
         <div className="seccion-titulo">Tus datos</div>
         <p className="subtitulo" style={{ marginBottom: 12 }}>
           Todo vive en este dispositivo (local-first). Exporta un respaldo JSON cuando quieras.
+          {ajustes.ultimoRespaldo
+            ? ` Último respaldo: ${haceTexto(ajustes.ultimoRespaldo)}.`
+            : ' Aún no has exportado ningún respaldo.'}
         </p>
         <div className="fila">
           <button className="btn btn-secundario btn-mini crece" onClick={exportar}>
@@ -130,8 +171,68 @@ export function Settings({ nav }: { nav: Nav }) {
       </div>
 
       <p className="subtitulo" style={{ textAlign: 'center', marginTop: 8 }}>
-        Life Copilot v1.0 · local-first · sin cuentas, sin nube
+        Life Copilot v1.1 · local-first · sin cuentas, sin nube
       </p>
+    </div>
+  )
+}
+
+function ConfigAICard() {
+  const ajustes = useLiveQuery(() => db.ajustes.get('main'))
+  const [proveedor, setProveedor] = useState<ConfigAI['proveedor']>()
+  const [apiKey, setApiKey] = useState<string>()
+  const [modelo, setModelo] = useState<string>()
+
+  if (!ajustes) return null
+  const vProveedor = proveedor ?? ajustes.ai?.proveedor ?? 'anthropic'
+  const vApiKey = apiKey ?? ajustes.ai?.apiKey ?? ''
+  const vModelo = modelo ?? ajustes.ai?.modelo ?? ''
+
+  async function guardar() {
+    await db.ajustes.update('main', {
+      ai: vApiKey.trim()
+        ? { proveedor: vProveedor, apiKey: vApiKey.trim(), modelo: vModelo.trim() || MODELO_DEFAULT[vProveedor] }
+        : undefined,
+    })
+    toast(vApiKey.trim() ? 'Copiloto AI configurado 🤖' : 'Copiloto AI desactivado')
+  }
+
+  return (
+    <div className="tarjeta">
+      <div className="seccion-titulo">Copiloto AI (opcional)</div>
+      <p className="subtitulo">
+        Con tu propia API key puedes conversar con un copiloto que conoce tus datos. La key se
+        guarda solo en este dispositivo y las llamadas van directo al proveedor.
+      </p>
+      <label>Proveedor</label>
+      <div className="chips">
+        {(['anthropic', 'openai'] as const).map((p) => (
+          <button
+            key={p}
+            className={`chip ${vProveedor === p ? 'activo' : ''}`}
+            onClick={() => setProveedor(p)}
+          >
+            {p === 'anthropic' ? 'Anthropic (Claude)' : 'OpenAI'}
+          </button>
+        ))}
+      </div>
+      <label>API key</label>
+      <input
+        type="password"
+        value={vApiKey}
+        onChange={(e) => setApiKey(e.target.value)}
+        placeholder={vProveedor === 'anthropic' ? 'sk-ant-…' : 'sk-…'}
+        autoComplete="off"
+      />
+      <label>Modelo (opcional)</label>
+      <input
+        value={vModelo}
+        onChange={(e) => setModelo(e.target.value)}
+        placeholder={MODELO_DEFAULT[vProveedor]}
+      />
+      <button className="btn btn-secundario btn-bloque" style={{ marginTop: 14 }} onClick={guardar}>
+        {vApiKey.trim() ? 'Guardar configuración' : 'Guardar (desactivar copiloto)'}
+      </button>
     </div>
   )
 }

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { db, uid } from '../db/db'
 import { AREAS_CATALOGO, AREAS_DEFAULT, RITMOS_CATALOGO } from '../db/seeds'
+import { pedirPersistencia } from '../logic/notify'
 import type { Persona } from '../db/types'
 
 interface PersonaBorrador {
@@ -86,6 +87,8 @@ export function Onboarding({ onListo }: { onListo: () => void }) {
       tema: 'sistema',
       mostrarNiveles: true,
     })
+    // reduce el riesgo de purga de IndexedDB por el navegador
+    pedirPersistencia()
     onListo()
   }
 
