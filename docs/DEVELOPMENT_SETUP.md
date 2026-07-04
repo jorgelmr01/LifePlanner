@@ -33,7 +33,7 @@ Abre `http://localhost:5173`. Para simular móvil usa las DevTools (modo respons
 | `npm test` | Tests unitarios (Vitest + fake-indexeddb): XP, sugerencias, logros, fechas |
 | `npm run icons` | Regenera los iconos PWA desde el SVG en `scripts/gen-icons.mjs` |
 
-**Deploy**: al hacer merge a `main`, `.github/workflows/deploy.yml` corre los tests, compila con `BASE_PATH=/<repo>/` y publica `dist/` en GitHub Pages (habilita Pages → Source: GitHub Actions en la configuración del repo la primera vez).
+**Deploy**: cada push a `main` (o a la rama de desarrollo actual) hace que `.github/workflows/deploy.yml` corra los tests, compile con `BASE_PATH=/<repo>/` y publique `dist/` en la rama `gh-pages`. Configuración única del repo: Settings → Pages → Source: *Deploy from a branch* → Branch: `gh-pages` / `(root)`. La app queda en `https://<usuario>.github.io/<repo>/`.
 
 ## Probar como app instalada
 
