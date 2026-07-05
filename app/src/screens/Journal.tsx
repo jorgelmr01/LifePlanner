@@ -4,7 +4,7 @@ import { db } from '../db/db'
 import type { Entry } from '../db/types'
 import { claveDia, fechaCorta, horaCorta } from '../logic/dates'
 import { actualizarEntrada, borrarEntrada, crearEntrada } from '../logic/actions'
-import { ChipsSelector, EscalaEmoji, Hoja, Vacio } from '../components/ui'
+import { ChipsSelector, EscalaEmoji, Hoja, Vacio, toast } from '../components/ui'
 import { PROMPTS_JOURNAL } from '../db/seeds'
 
 interface ItemTimeline {
@@ -190,29 +190,47 @@ export function Journal() {
   )
 }
 
-/* ---------- Dictado por voz (Web Speech API, donde exista) ---------- */
+/* ---------- Dictado por voz (Web Speech API, donde funciona de verdad) ---------- */
 interface Reconocedor {
   start(): void
   stop(): void
+  abort?(): void
   onresult: ((e: { results: ArrayLike<ArrayLike<{ transcript: string }>>; resultIndex: number }) => void) | null
   onend: (() => void) | null
+  onerror: ((e: { error?: string }) => void) | null
   continuous: boolean
   interimResults: boolean
   lang: string
 }
 
+function esIOS(): boolean {
+  return (
+    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    // iPadOS se reporta como Mac pero tiene pantalla táctil
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  )
+}
+
 function crearReconocedor(): Reconocedor | null {
+  // iOS/WebKit expone la API pero no funciona en PWA instalada: se queda
+  // "grabando" para siempre y congela la hoja. Ahí el teclado nativo ya
+  // trae dictado (🎤), así que ni ofrecemos el botón.
+  if (esIOS()) return null
   const w = window as unknown as {
     SpeechRecognition?: new () => Reconocedor
     webkitSpeechRecognition?: new () => Reconocedor
   }
   const Ctor = w.SpeechRecognition ?? w.webkitSpeechRecognition
   if (!Ctor) return null
-  const r = new Ctor()
-  r.continuous = true
-  r.interimResults = false
-  r.lang = 'es-MX'
-  return r
+  try {
+    const r = new Ctor()
+    r.continuous = true
+    r.interimResults = false
+    r.lang = 'es-MX'
+    return r
+  } catch {
+    return null
+  }
 }
 
 export function EntradaHoja({
@@ -235,12 +253,25 @@ export function EntradaHoja({
   const [privada, setPrivada] = useState(existente?.privacidad === 'privada')
   const [grabando, setGrabando] = useState(false)
   const recRef = useRef<Reconocedor | null>(null)
+  const watchdogRef = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   const areas = useLiveQuery(() => db.areas.orderBy('orden').toArray()) ?? []
   const personas = useLiveQuery(() => db.personas.where('estado').equals('activa').toArray()) ?? []
   const soportaVoz = useMemo(() => crearReconocedor() !== null, [])
 
-  useEffect(() => () => recRef.current?.stop(), [])
+  function apagarDictado() {
+    clearTimeout(watchdogRef.current)
+    const rec = recRef.current
+    recRef.current = null
+    try {
+      rec?.abort ? rec.abort() : rec?.stop()
+    } catch {
+      /* ya estaba detenido */
+    }
+    setGrabando(false)
+  }
+
+  useEffect(() => () => apagarDictado(), []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const prompts = useMemo(() => {
     const deAreas = areas.filter((a) => areaIds.includes(a.id)).flatMap((a) => a.prompts)
@@ -249,21 +280,42 @@ export function EntradaHoja({
 
   function alternarVoz() {
     if (grabando) {
-      recRef.current?.stop()
-      setGrabando(false)
+      apagarDictado()
       return
     }
     const rec = crearReconocedor()
     if (!rec) return
+    let recibioAlgo = false
     rec.onresult = (e) => {
+      recibioAlgo = true
+      clearTimeout(watchdogRef.current)
       let texto = ''
       for (let i = e.resultIndex; i < e.results.length; i++) texto += e.results[i][0].transcript
       if (texto) setContenido((c) => (c ? c + ' ' : '') + texto.trim())
     }
-    rec.onend = () => setGrabando(false)
+    rec.onend = () => {
+      clearTimeout(watchdogRef.current)
+      setGrabando(false)
+    }
+    rec.onerror = () => {
+      apagarDictado()
+      toast('No se pudo usar el dictado; usa el 🎤 del teclado')
+    }
+    try {
+      rec.start()
+    } catch {
+      toast('El dictado no está disponible en este navegador')
+      return
+    }
     recRef.current = rec
-    rec.start()
     setGrabando(true)
+    // blindaje: si en 8s no llegó nada, apagamos en vez de quedarnos "grabando"
+    watchdogRef.current = setTimeout(() => {
+      if (!recibioAlgo) {
+        apagarDictado()
+        toast('El dictado no respondió; usa el 🎤 del teclado')
+      }
+    }, 8000)
   }
 
   async function guardar() {
